@@ -85,3 +85,18 @@ Download TokoPOS sekarang dan kelola transaksi toko Anda dengan lebih mudah, cep
 - **Target Audiens:** Usia 18 tahun ke atas (Pelaku usaha, pemilik toko, UMKM)
 - **Iklan:** Pilih "Tidak, aplikasi saya tidak berisi iklan" (*No, my app does not contain ads*)
 - **Akses Aplikasi (App Access):** Pilih "Semua fungsi tersedia tanpa batasan" (*All functionality is available without special access*)
+
+---
+
+## 4. Informasi Kontak Pengembang (Developer Contact Details)
+
+Wajib diisi pada halaman **"Pengaturan Store" / "Detail Kontak Pengembang"** di Google Play Console:
+
+- **Nama Pengembang / Organisasi:** `ALIJAYA NET`
+- **Alamat Email:** `alijayanet@gmail.com`
+- **Nomor Telepon:** `+6281947215703` *(Gunakan format internasional +62)*
+- **Situs Web:** `https://github.com/alijayanet/POS-offline`
+- **URL Kebijakan Privasi (Privacy Policy URL):**  
+  `https://alijayanet.github.io/POS-offline/privacy-policy.html`  
+  *(Atau tautan raw/markdown: `https://github.com/alijayanet/POS-offline/blob/main/PRIVACY_POLICY.md`)*
+- **Alamat Fisik Pengembang (Jika diminta untuk akun Play Console Organisasi):** Indonesia

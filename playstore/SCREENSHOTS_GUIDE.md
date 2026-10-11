@@ -8,7 +8,7 @@ Saat mengunggah ke Google Play Console, Anda wajib mengunggah **Tangkapan Layar 
 
 - **Package Name Resmi:**
   ```
-  com.aistudio.tokopos.app
+  com.alijaya.tokopos.app
   ```
   *(Dapat dilihat pada berkas `app/build.gradle.kts`)*
 

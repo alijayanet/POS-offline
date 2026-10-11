@@ -1,8 +1,9 @@
 # Kebijakan Privasi TokoPOS
 
 **Terakhir Diperbarui:** 11 Oktober 2026  
-**Pengembang:** Ali Jaya Net  
-**Aplikasi:** TokoPOS (com.aistudio.tokopos.app)
+**Pengembang:** ALIJAYA NET  
+**Kontak Pengembang:** alijayanet@gmail.com | 081947215703  
+**Aplikasi:** TokoPOS (com.alijaya.tokopos.app)
 
 Selamat datang di **TokoPOS**. Kami sangat menghargai privasi Anda dan berkomitmen untuk melindungi data bisnis Anda. Kebijakan Privasi ini menjelaskan bagaimana aplikasi TokoPOS menangani informasi dan data pengguna saat Anda menggunakan aplikasi kami.
 
@@ -73,5 +74,7 @@ Kami dapat memperbarui Kebijakan Privasi ini dari waktu ke waktu jika terdapat p
 
 ## 8. Kontak Kami
 Jika Anda memiliki pertanyaan atau masukan mengenai Kebijakan Privasi ini, silakan hubungi kami:
+- **Pengembang:** ALIJAYA NET
 - **Email:** alijayanet@gmail.com
+- **Nomor Telepon / WhatsApp:** +62 819-4721-5703 (081947215703)
 - **Repositori GitHub:** [https://github.com/alijayanet/POS-offline](https://github.com/alijayanet/POS-offline)

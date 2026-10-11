@@ -1433,6 +1433,18 @@ fun SettingsScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = EditorialNavy
                         )
+
+                        Text(
+                            text = "6. Kontak & Pengembang Aplikasi",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = EditorialPrimaryBlue
+                        )
+                        Text(
+                            text = "Pengembang: ALIJAYA NET\nEmail: alijayanet@gmail.com\nTelepon/WhatsApp: 081947215703\nPaket: com.alijaya.tokopos.app",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = EditorialNavy
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(12.dp))
