@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kebijakan Privasi - TokoPOS</title>
+    <style>
+        :root {
+            --primary: #1E3A8A;
+            --primary-light: #3B82F6;
+            --bg: #F8FAFC;
+            --card-bg: #FFFFFF;
+            --text-main: #0F172A;
+            --text-muted: #475569;
+            --border: #E2E8F0;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            line-height: 1.7;
+            padding: 24px 16px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border);
+        }
+        .header {
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 24px;
+            margin-bottom: 32px;
+        }
+        .app-badge {
+            display: inline-block;
+            background: #EFF6FF;
+            color: var(--primary-light);
+            font-size: 13px;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 20px;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        h1 {
+            color: var(--primary);
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+        .meta {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+        h2 {
+            color: var(--primary);
+            font-size: 20px;
+            margin-top: 32px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        h3 {
+            font-size: 16px;
+            color: #1E293B;
+            margin-top: 18px;
+            margin-bottom: 6px;
+        }
+        p {
+            color: var(--text-muted);
+            margin-bottom: 14px;
+        }
+        ul {
+            color: var(--text-muted);
+            padding-left: 24px;
+            margin-bottom: 14px;
+        }
+        li {
+            margin-bottom: 8px;
+        }
+        .highlight-box {
+            background-color: #F0FDF4;
+            border-left: 4px solid #22C55E;
+            padding: 16px;
+            border-radius: 8px;
+            margin: 20px 0;
+            color: #166534;
+            font-weight: 500;
+        }
+        .permission-card {
+            background: #F8FAFC;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        .permission-card h3 {
+            margin-top: 0;
+            color: var(--primary);
+        }
+        footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+            font-size: 13px;
+            color: var(--text-muted);
+            text-align: center;
+        }
+        a {
+            color: var(--primary-light);
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <span class="app-badge">Official Policy</span>
+            <h1>Kebijakan Privasi TokoPOS</h1>
+            <div class="meta">
+                <p><strong>Aplikasi:</strong> TokoPOS (com.aistudio.tokopos.app)</p>
+                <p><strong>Pengembang:</strong> Ali Jaya Net</p>
+                <p><strong>Terakhir Diperbarui:</strong> 11 Oktober 2026</p>
+            </div>
+        </div>
+
+        <div class="highlight-box">
+            🛡️ <strong>Prinsip Utama:</strong> TokoPOS adalah aplikasi kasir dan pembukuan toko yang beroperasi <strong>100% Offline</strong>. Seluruh data transaksi, pelanggan, katalog produk, dan laporan keuangan hanya disimpan di perangkat lokal Anda. Kami tidak mengumpulkan, tidak mengunggah, dan tidak menjual data Anda kepada pihak mana pun.
+        </div>
+
+        <h2>1. Data yang Disimpan &amp; Lokasi Penyimpanan</h2>
+        <p>Seluruh data yang Anda masukkan ke dalam aplikasi TokoPOS, termasuk namun tidak terbatas pada:</p>
+        <ul>
+            <li>Informasi Toko (Nama toko, nama pemilik, nomor telepon, alamat, catatan kaki struk).</li>
+            <li>Master Produk (Nama barang, SKU, barcode, harga modal, harga jual, jumlah stok, kategori).</li>
+            <li>Riwayat Transaksi Penjualan, Keuntungan, dan Hutang Pelanggan.</li>
+            <li>Data Pelanggan Tagihan Bulanan (WiFi/TV Kabel/Iuran).</li>
+        </ul>
+        <p>Data tersebut disimpan <strong>secara lokal di memori internal smartphone Anda</strong> menggunakan database SQLite Room terisolasi milik aplikasi. TokoPOS tidak memiliki server pusat (cloud) untuk menyinkronkan atau mengumpulkan data Anda.</p>
+
+        <h2>2. Izin Perangkat Android yang Digunakan</h2>
+        <p>Aplikasi TokoPOS hanya meminta izin sistem operasi Android yang benar-benar esensial untuk menjalankan fitur toko:</p>
+
+        <div class="permission-card">
+            <h3>📷 Izin Kamera (android.permission.CAMERA)</h3>
+            <p><strong>Fungsi:</strong> Digunakan untuk memindai barcode fisik pada kemasan produk saat transaksi kasir atau input barang baru, serta memindai QRIS.</p>
+            <p><strong>Keamanan:</strong> Deteksi diproses langsung di HP Anda (on-device) melalui Google ML Kit Vision. Aplikasi <strong>TIDAK PERNAH</strong> menyimpan foto, merekam video, ataupun mengunggah rekaman visual kamera Anda.</p>
+        </div>
+
+        <div class="permission-card">
+            <h3>🖨️ Izin Bluetooth (BLUETOOTH_CONNECT &amp; BLUETOOTH_SCAN)</h3>
+            <p><strong>Fungsi:</strong> Digunakan untuk menghubungkan HP ke printer thermal Bluetooth (ESC/POS) 58mm &amp; 80mm guna mencetak struk belanja, kuitansi nota manual, dan label barcode barang.</p>
+            <p><strong>Tanpa Pelacakan Lokasi (neverForLocation):</strong> Izin Bluetooth dikonfigurasi dengan flag <code>neverForLocation</code>. Kami <strong>tidak pernah mengakses atau melacak lokasi fisik GPS perangkat Anda</strong>.</p>
+        </div>
+
+        <div class="permission-card">
+            <h3>🌐 Izin Internet Umum (android.permission.INTERNET)</h3>
+            <p><strong>Fungsi:</strong> Digunakan untuk membuka tautan WhatsApp resmi saat Anda memilih menu kirim struk belanja ke pelanggan via WhatsApp. Aplikasi tidak menggunakan internet untuk mengirimkan data transaksi Anda ke server kami.</p>
+        </div>
+
+        <h2>3. Cadangan (Backup) &amp; Ekspor Data</h2>
+        <p>TokoPOS menyediakan fitur ekspor laporan ke format Excel/CSV dan cadangan database ke file JSON. Pembuatan file ini hanya terjadi ketika Anda menekan tombol ekspor secara manual. File dibagikan melalui protokol standar <strong>Android FileProvider</strong> yang aman.</p>
+
+        <h2>4. Bebas Iklan &amp; Bebas Pelacak Pihak Ketiga</h2>
+        <p>Aplikasi TokoPOS bebas dari modul periklanan pihak ketiga (*Ad Networks*) dan bebas dari pustaka pelacak analitik pengguna (*Tracking SDKs*). Kami tidak melacak aktivitas atau kebiasaan belanja Anda.</p>
+
+        <h2>5. Hak Pengguna &amp; Penghapusan Data</h2>
+        <p>Anda memegang kendali penuh 100% atas data Anda:</p>
+        <ul>
+            <li>Anda dapat mengedit, memperbarui, atau menghapus data produk dan transaksi kapan saja melalui aplikasi.</li>
+            <li>Anda dapat menghapus seluruh data secara instan melalui tombol <strong>Reset Database</strong> di menu Pengaturan.</li>
+            <li>Anda dapat menghapus seluruh data secara permanen cukup dengan mencopot pemasangan (*Uninstall*) aplikasi TokoPOS dari perangkat smartphone Anda.</li>
+        </ul>
+
+        <h2>6. Kontak Pengembang</h2>
+        <p>Jika Anda memiliki pertanyaan mengenai Kebijakan Privasi ini atau membutuhkan bantuan terkait aplikasi TokoPOS, hubungi kami melalui:</p>
+        <ul>
+            <li><strong>Email:</strong> alijayanet@gmail.com</li>
+            <li><strong>GitHub:</strong> <a href="https://github.com/alijayanet/POS-offline" target="_blank">alijayanet/POS-offline</a></li>
+        </ul>
+
+        <footer>
+            &copy; 2026 TokoPOS by Ali Jaya Net. All rights reserved.
+        </footer>
+    </div>
+</body>
+</html>

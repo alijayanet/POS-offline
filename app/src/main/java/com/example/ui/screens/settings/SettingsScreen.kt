@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,13 +19,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.RestartAlt
@@ -185,6 +189,7 @@ fun SettingsScreen(
 
     var showAddCategoryDialog by remember { mutableStateOf(false) }
     var showResetConfirmDialog by remember { mutableStateOf(false) }
+    var showPrivacyPolicyDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState.message) {
         uiState.message?.let {
@@ -1009,10 +1014,28 @@ fun SettingsScreen(
                         )
                     )
                     Text(
-                        text = "Aplikasi Kasir POS & Manajemen Stok Toko",
+                        text = "Aplikasi Kasir POS & Manajemen Stok (100% Offline)",
                         style = MaterialTheme.typography.bodySmall,
                         color = EditorialMuted
                     )
+                    Text(
+                        text = "Versi 1.1 • Bebas Server & Bebas Pelacakan",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = EditorialMuted,
+                        fontSize = 11.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    OutlinedButton(
+                        onClick = { showPrivacyPolicyDialog = true },
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Kebijakan Privasi & Keamanan Data", fontWeight = FontWeight.SemiBold)
+                    }
                 }
             }
         }
@@ -1305,6 +1328,121 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.width(6.dp))
                             Text("Pulihkan Sekarang")
                         }
+                    }
+                }
+            }
+        }
+    }
+
+    if (showPrivacyPolicyDialog) {
+        Dialog(onDismissRequest = { showPrivacyPolicyDialog = false }) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.85f)
+                    .clip(RoundedCornerShape(24.dp))
+                    .border(1.dp, EditorialOutline, RoundedCornerShape(24.dp)),
+                color = EditorialCardWhite
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(20.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Kebijakan Privasi",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = EditorialNavy
+                        )
+                        IconButton(onClick = { showPrivacyPolicyDialog = false }) {
+                            Icon(Icons.Default.Close, contentDescription = "Tutup")
+                        }
+                    }
+
+                    HorizontalDivider(color = EditorialOutline)
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = "1. Penyimpanan Data 100% Offline Lokal",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = EditorialPrimaryBlue
+                        )
+                        Text(
+                            text = "TokoPOS dirancang sepenuhnya offline. Seluruh data transaksi, pelanggan, katalog produk, dan laporan keuangan tersimpan aman secara lokal di memori smartphone Anda (SQLite Room). Aplikasi tidak memiliki server eksternal dan tidak mengumpulkan, menyalin, ataupun menjual data toko Anda.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = EditorialNavy
+                        )
+
+                        Text(
+                            text = "2. Izin Kamera (Scan Barcode & QRIS)",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = EditorialPrimaryBlue
+                        )
+                        Text(
+                            text = "Izin kamera digunakan secara eksklusif untuk mendeteksi barcode kemasan produk dan scan QR Code menggunakan pustaka Google ML Kit langsung pada perangkat (on-device). Kamera tidak mengambil foto, tidak merekam video, dan tidak mengunggah data visual ke internet.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = EditorialNavy
+                        )
+
+                        Text(
+                            text = "3. Izin Bluetooth (Printer Struk Thermal)",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = EditorialPrimaryBlue
+                        )
+                        Text(
+                            text = "Izin Bluetooth hanya digunakan untuk menghubungkan smartphone ke printer thermal Bluetooth (ESC/POS) guna mencetak struk kasir dan kuitansi nota. Aplikasi tidak menggunakan Bluetooth untuk melacak posisi/lokasi fisik pengguna (neverForLocation).",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = EditorialNavy
+                        )
+
+                        Text(
+                            text = "4. Ekspor File & Backup Cadangan",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = EditorialPrimaryBlue
+                        )
+                        Text(
+                            text = "File cadangan database (.json) dan ekspor laporan keuangan (.csv) hanya diproses saat Anda meminta ekspor secara manual. File dibagikan melalui protokol Android FileProvider yang terisolasi dan aman.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = EditorialNavy
+                        )
+
+                        Text(
+                            text = "5. Kendali Penuh & Penghapusan Data",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = EditorialPrimaryBlue
+                        )
+                        Text(
+                            text = "Anda memiliki kendali penuh atas data bisnis Anda. Anda dapat mereset data toko kapan saja melalui menu Pengaturan, atau menghapus seluruh data secara permanen cukup dengan menghapus data aplikasi atau mencopot pemasangan (uninstall) aplikasi dari perangkat.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = EditorialNavy
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(
+                        onClick = { showPrivacyPolicyDialog = false },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = EditorialPrimaryBlue)
+                    ) {
+                        Text("Tutup", fontWeight = FontWeight.Bold)
                     }
                 }
             }

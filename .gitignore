@@ -16,3 +16,5 @@ debug.keystore
 .antigravity/
 .vscode/
 *.apk
+*.aab
+*.jks
