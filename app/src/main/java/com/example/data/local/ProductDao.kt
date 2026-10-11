@@ -14,7 +14,7 @@ interface ProductDao {
     @Query("SELECT * FROM products WHERE isActive = 1 ORDER BY name ASC")
     fun getAllProducts(): Flow<List<Product>>
 
-    @Query("SELECT * FROM products WHERE isActive = 1 AND (name LIKE '%' || :query || '%' OR barcode LIKE '%' || :query || '%' OR category LIKE '%' || :query || '%') ORDER BY name ASC")
+    @Query("SELECT * FROM products WHERE isActive = 1 AND (name LIKE '%' || :query || '%' OR barcode LIKE '%' || :query || '%' OR sku LIKE '%' || :query || '%' OR category LIKE '%' || :query || '%') ORDER BY name ASC")
     fun searchProducts(query: String): Flow<List<Product>>
 
     @Query("SELECT * FROM products WHERE isActive = 1 AND category = :category ORDER BY name ASC")
@@ -35,7 +35,7 @@ interface ProductDao {
     @Query("SELECT SUM(stock * sellPrice) FROM products WHERE isActive = 1")
     fun getTotalInventoryRetailValue(): Flow<Double?>
 
-    @Query("SELECT * FROM products WHERE barcode = :barcode AND isActive = 1 LIMIT 1")
+    @Query("SELECT * FROM products WHERE (barcode = :barcode OR sku = :barcode) AND isActive = 1 LIMIT 1")
     suspend fun getProductByBarcode(barcode: String): Product?
 
     @Query("SELECT * FROM products WHERE id = :id LIMIT 1")

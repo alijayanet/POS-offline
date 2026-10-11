@@ -91,6 +91,7 @@ object BackupManager {
             prodArray.put(JSONObject().apply {
                 put("id", p.id)
                 put("barcode", p.barcode)
+                put("sku", p.sku)
                 put("name", p.name)
                 put("category", p.category)
                 put("buyPrice", p.buyPrice)
@@ -407,6 +408,7 @@ object BackupManager {
                             Product(
                                 id = if (replaceExisting) p.optLong("id", 0) else 0,
                                 barcode = p.optString("barcode", ""),
+                                sku = p.optString("sku", ""),
                                 name = p.getString("name"),
                                 category = p.optString("category", "Umum"),
                                 buyPrice = p.optDouble("buyPrice", 0.0),

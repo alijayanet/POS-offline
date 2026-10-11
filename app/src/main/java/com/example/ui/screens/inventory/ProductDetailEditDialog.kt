@@ -18,9 +18,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenuItem
+import com.example.ui.components.CameraBarcodeScannerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
@@ -62,7 +64,9 @@ fun ProductDetailEditDialog(
     onDismiss: () -> Unit
 ) {
     var name by remember { mutableStateOf(initialProduct?.name ?: "") }
+    var sku by remember { mutableStateOf(initialProduct?.sku ?: "") }
     var barcode by remember { mutableStateOf(initialProduct?.barcode ?: "") }
+    var showBarcodeScanner by remember { mutableStateOf(false) }
     var selectedCategory by remember { mutableStateOf(initialProduct?.category ?: if (categories.isNotEmpty()) categories[0].name else "Sembako") }
     var buyPriceText by remember { mutableStateOf(if (initialProduct != null) initialProduct.buyPrice.toLong().toString() else "0") }
     var sellPriceText by remember { mutableStateOf(if (initialProduct != null) initialProduct.sellPrice.toLong().toString() else "0") }
@@ -158,9 +162,39 @@ fun ProductDetailEditDialog(
                             .testTag("product_name_input")
                     )
 
+                    // 1. SKU (Internal Toko) with Auto-generate helper
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = sku,
+                            onValueChange = { sku = it },
+                            label = { Text("Kode SKU (Internal Toko)") },
+                            placeholder = { Text("SKU-001 / Otomatis") },
+                            singleLine = true,
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("product_sku_input")
+                        )
+
+                        OutlinedButton(
+                            onClick = {
+                                val randomNum = (10000..99999).random()
+                                sku = "SKU-$randomNum"
+                            },
+                            modifier = Modifier.padding(top = 6.dp)
+                        ) {
+                            Icon(Icons.Default.AutoAwesome, contentDescription = null)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Auto", fontSize = 12.sp)
+                        }
+                    }
+
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Barcode / SKU with Auto-generate helper
+                    // 2. Barcode Produk (Bawaan Pabrik / Kemasan) with Live Camera Scanner
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
@@ -169,24 +203,21 @@ fun ProductDetailEditDialog(
                         OutlinedTextField(
                             value = barcode,
                             onValueChange = { barcode = it },
-                            label = { Text("Barcode / Kode SKU") },
-                            placeholder = { Text("899...") },
+                            label = { Text("Barcode Produk (Bawaan Pabrik)") },
+                            placeholder = { Text("Scan / 899...") },
                             singleLine = true,
                             modifier = Modifier
                                 .weight(1f)
                                 .testTag("product_barcode_input")
                         )
 
-                        OutlinedButton(
-                            onClick = {
-                                val randomCode = "899" + (100000000L + (Math.random() * 900000000L).toLong())
-                                barcode = randomCode
-                            },
+                        Button(
+                            onClick = { showBarcodeScanner = true },
                             modifier = Modifier.padding(top = 6.dp)
                         ) {
-                            Icon(Icons.Default.AutoAwesome, contentDescription = null)
+                            Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan Barcode")
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Auto", fontSize = 12.sp)
+                            Text("Scan", fontSize = 12.sp)
                         }
                     }
 
@@ -421,6 +452,7 @@ fun ProductDetailEditDialog(
                                     val newProduct = Product(
                                         id = initialProduct?.id ?: 0L,
                                         barcode = barcode.trim(),
+                                        sku = sku.trim(),
                                         name = name.trim(),
                                         category = selectedCategory,
                                         buyPrice = buyPriceText.toDoubleOrNull() ?: 0.0,
@@ -491,5 +523,15 @@ fun ProductDetailEditDialog(
                 }
             }
         }
+    }
+
+    if (showBarcodeScanner) {
+        CameraBarcodeScannerDialog(
+            onBarcodeScanned = { scannedCode ->
+                barcode = scannedCode.trim()
+                showBarcodeScanner = false
+            },
+            onDismiss = { showBarcodeScanner = false }
+        )
     }
 }

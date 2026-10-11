@@ -242,8 +242,9 @@ fun ManualInvoiceScreen(
         if (order.notes.isNotBlank()) {
             sb.append("Catatan  : _").append(order.notes).append("_\n")
         }
+        val footer = storeProfile?.receiptFooter?.ifBlank { "Terima kasih atas kunjungan dan kepercayaannya!" } ?: "Terima kasih atas kunjungan dan kepercayaannya!"
         sb.append("━━━━━━━━━━━━━━━━━━━━━━\n\n")
-        sb.append("_Terima kasih atas kunjungan dan kepercayaannya!_ 🙏✨")
+        sb.append("_").append(footer).append("_ 🙏✨")
 
         return sb.toString()
     }

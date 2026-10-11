@@ -8,6 +8,7 @@ data class Product(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val barcode: String = "",
+    val sku: String = "",
     val name: String,
     val category: String = "Umum",
     val buyPrice: Double = 0.0, // Modal / COGS

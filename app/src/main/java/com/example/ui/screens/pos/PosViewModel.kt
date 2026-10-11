@@ -122,7 +122,8 @@ class PosViewModel(application: Application) : AndroidViewModel(application) {
                 val matchesCategory = (cat == "Semua" || prod.category.equals(cat, ignoreCase = true))
                 val matchesQuery = query.isBlank() ||
                         prod.name.contains(query, ignoreCase = true) ||
-                        prod.barcode.contains(query, ignoreCase = true)
+                        prod.barcode.contains(query, ignoreCase = true) ||
+                        prod.sku.contains(query, ignoreCase = true)
                 matchesCategory && matchesQuery
             }
 
@@ -189,9 +190,11 @@ class PosViewModel(application: Application) : AndroidViewModel(application) {
                 _message.value = "Ditambahkan: ${product.name}"
                 closeCameraScanner()
             } else {
-                // Try searching by name match if not barcode
+                // Try searching by name/sku match if not barcode
                 val matched = uiState.value.allRawProducts.firstOrNull {
-                    it.barcode.equals(cleanBarcode, ignoreCase = true) || it.name.contains(cleanBarcode, ignoreCase = true)
+                    it.barcode.equals(cleanBarcode, ignoreCase = true) ||
+                    it.sku.equals(cleanBarcode, ignoreCase = true) ||
+                    it.name.contains(cleanBarcode, ignoreCase = true)
                 }
                 if (matched != null) {
                     addToCart(matched, 1.0)

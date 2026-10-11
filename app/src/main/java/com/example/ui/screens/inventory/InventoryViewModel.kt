@@ -83,6 +83,7 @@ class InventoryViewModel(application: Application) : AndroidViewModel(applicatio
                 val matchesQuery = query.isBlank() ||
                         prod.name.contains(query, ignoreCase = true) ||
                         prod.barcode.contains(query, ignoreCase = true) ||
+                        prod.sku.contains(query, ignoreCase = true) ||
                         prod.supplier.contains(query, ignoreCase = true)
 
                 matchesCategory && matchesStock && matchesQuery

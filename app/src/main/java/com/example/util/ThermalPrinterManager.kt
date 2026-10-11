@@ -213,7 +213,7 @@ object ThermalPrinterManager {
         // Header
         sb.append(centerText(storeName.uppercase(), lineWidth)).append("\r\n")
         if (address.isNotBlank()) {
-            sb.append(centerText(address, lineWidth)).append("\r\n")
+            appendMultiLineCentered(sb, address, lineWidth)
         }
         if (phone.isNotBlank()) {
             sb.append(centerText("Telp: $phone", lineWidth)).append("\r\n")
@@ -256,7 +256,7 @@ object ThermalPrinterManager {
         }
 
         sb.append("=".repeat(lineWidth)).append("\r\n")
-        sb.append(centerText(footer, lineWidth)).append("\r\n")
+        appendMultiLineCentered(sb, footer, lineWidth)
         
         // Balanced 3 Trailing blank lines
         sb.append("   \r\n   \r\n   \r\n")
@@ -383,7 +383,7 @@ object ThermalPrinterManager {
         // Header
         sb.append(centerText(storeName.uppercase(), lineWidth)).append("\r\n")
         if (address.isNotBlank()) {
-            sb.append(centerText(address, lineWidth)).append("\r\n")
+            appendMultiLineCentered(sb, address, lineWidth)
         }
         if (phone.isNotBlank()) {
             sb.append(centerText("Telp: $phone", lineWidth)).append("\r\n")
@@ -416,7 +416,7 @@ object ThermalPrinterManager {
         sb.append("=".repeat(lineWidth)).append("\r\n")
         sb.append(twoColumnText("TOTAL BAYAR", total, lineWidth)).append("\r\n")
         sb.append("=".repeat(lineWidth)).append("\r\n")
-        sb.append(centerText(footer, lineWidth)).append("\r\n")
+        appendMultiLineCentered(sb, footer, lineWidth)
         
         // Trailing feed
         sb.append("\r\n\r\n\r\n")
@@ -704,6 +704,58 @@ object ThermalPrinterManager {
         val leftPad = (width - text.length) / 2
         val rightPad = width - text.length - leftPad
         return " ".repeat(leftPad) + text + " ".repeat(rightPad)
+    }
+
+    private fun wrapText(text: String, width: Int): List<String> {
+        if (text.length <= width) return listOf(text)
+        val words = text.split(" ")
+        val result = mutableListOf<String>()
+        var currentLine = StringBuilder()
+
+        for (word in words) {
+            if (currentLine.isEmpty()) {
+                if (word.length <= width) {
+                    currentLine.append(word)
+                } else {
+                    word.chunked(width).forEach { chunk ->
+                        result.add(chunk)
+                    }
+                }
+            } else {
+                if (currentLine.length + 1 + word.length <= width) {
+                    currentLine.append(" ").append(word)
+                } else {
+                    result.add(currentLine.toString())
+                    currentLine = StringBuilder()
+                    if (word.length <= width) {
+                        currentLine.append(word)
+                    } else {
+                        word.chunked(width).forEach { chunk ->
+                            result.add(chunk)
+                        }
+                    }
+                }
+            }
+        }
+        if (currentLine.isNotEmpty()) {
+            result.add(currentLine.toString())
+        }
+        return result
+    }
+
+    private fun appendMultiLineCentered(sb: StringBuilder, text: String, width: Int) {
+        val lines = text.split("\r\n", "\n", "\r")
+        for (line in lines) {
+            val trimmed = line.trim()
+            if (trimmed.isEmpty()) {
+                sb.append("\r\n")
+            } else {
+                val wrapped = wrapText(trimmed, width)
+                for (w in wrapped) {
+                    sb.append(centerText(w, width)).append("\r\n")
+                }
+            }
+        }
     }
 
     private fun twoColumnText(left: String, right: String, width: Int): String {

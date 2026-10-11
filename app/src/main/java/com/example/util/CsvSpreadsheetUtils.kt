@@ -28,9 +28,10 @@ object CsvSpreadsheetUtils {
         sb.append(UTF8_BOM) // Enables Excel to recognize UTF-8 instantly
 
         // Header
-        sb.append("Barcode,Nama Produk,Kategori,Harga Beli (Modal),Harga Jual,Stok,Satuan,Min Stok Alert,Harga Grosir,Min Qty Grosir,Supplier,Deskripsi\n")
+        sb.append("SKU,Barcode,Nama Produk,Kategori,Harga Beli (Modal),Harga Jual,Stok,Satuan,Min Stok Alert,Harga Grosir,Min Qty Grosir,Supplier,Deskripsi\n")
 
         for (p in products) {
+            sb.append(escapeCsv(p.sku)).append(",")
             sb.append(escapeCsv(p.barcode)).append(",")
             sb.append(escapeCsv(p.name)).append(",")
             sb.append(escapeCsv(p.category)).append(",")
@@ -54,13 +55,13 @@ object CsvSpreadsheetUtils {
     fun generateProductTemplateCsv(): String {
         val sb = StringBuilder()
         sb.append(UTF8_BOM)
-        sb.append("Barcode,Nama Produk,Kategori,Harga Beli (Modal),Harga Jual,Stok,Satuan,Min Stok Alert,Harga Grosir,Min Qty Grosir,Supplier,Deskripsi\n")
-        sb.append("8991234567890,Beras Premium Ramos 5kg,Sembako,65000,75000,50,Karung,5,72000,5,CV Sumber Beras,Beras Ramos pulen super\n")
-        sb.append("8992345678901,Minyak Goreng Bimoli 2L,Minyak & Bumbu,32000,36000,30,Pouch,6,34500,6,PT Distribusi Sembako,Minyak goreng kelapa sawit\n")
-        sb.append("8993456789012,Gula Pasir Gulaku 1kg,Sembako,15000,17500,100,Kg,10,16500,10,PT Distribusi Sembako,Gula tebu murni\n")
-        sb.append(",Kopi Tubruk Manis,Minuman,3000,5000,100,Cup,10,0,0,,Kopi hitam khas warung\n")
-        sb.append(",Nasi Goreng Spesial,Makanan,12000,18000,50,Porsi,5,0,0,,Nasi goreng telur + ayam\n")
-        sb.append(",Kain Katun Rayon,Tekstil,25000,35000,150,Meter,10,30000,10,Pabrik Tekstil,Kain meteran motif polos\n")
+        sb.append("SKU,Barcode,Nama Produk,Kategori,Harga Beli (Modal),Harga Jual,Stok,Satuan,Min Stok Alert,Harga Grosir,Min Qty Grosir,Supplier,Deskripsi\n")
+        sb.append("SKU-001,8991234567890,Beras Premium Ramos 5kg,Sembako,65000,75000,50,Karung,5,72000,5,CV Sumber Beras,Beras Ramos pulen super\n")
+        sb.append("SKU-002,8992345678901,Minyak Goreng Bimoli 2L,Minyak & Bumbu,32000,36000,30,Pouch,6,34500,6,PT Distribusi Sembako,Minyak goreng kelapa sawit\n")
+        sb.append("SKU-003,8993456789012,Gula Pasir Gulaku 1kg,Sembako,15000,17500,100,Kg,10,16500,10,PT Distribusi Sembako,Gula tebu murni\n")
+        sb.append("SKU-004,,Kopi Tubruk Manis,Minuman,3000,5000,100,Cup,10,0,0,,Kopi hitam khas warung\n")
+        sb.append("SKU-005,,Nasi Goreng Spesial,Makanan,12000,18000,50,Porsi,5,0,0,,Nasi goreng telur + ayam\n")
+        sb.append("SKU-006,,Kain Katun Rayon,Tekstil,25000,35000,150,Meter,10,30000,10,Pabrik Tekstil,Kain meteran motif polos\n")
         return sb.toString()
     }
 
@@ -78,31 +79,64 @@ object CsvSpreadsheetUtils {
         // Detect delimiter (comma or semicolon)
         val headerLine = lines.first()
         val delimiter = if (headerLine.count { it == ';' } > headerLine.count { it == ',' }) ';' else ','
+        val hasSkuColumn = headerLine.contains("SKU", ignoreCase = true)
 
         for (i in 1 until lines.size) {
             val line = lines[i]
             val tokens = splitCsvLine(line, delimiter)
             if (tokens.isEmpty()) continue
 
-            val name = tokens.getOrNull(1)?.trim() ?: ""
-            if (name.isBlank()) continue
+            val sku: String
+            val barcode: String
+            val name: String
+            val category: String
+            val buyPrice: Double
+            val sellPrice: Double
+            val stock: Double
+            val unit: String
+            val minStock: Double
+            val wholesalePrice: Double
+            val wholesaleMinQty: Double
+            val supplier: String
+            val description: String
 
-            val barcode = tokens.getOrNull(0)?.trim() ?: ""
-            val category = tokens.getOrNull(2)?.trim()?.ifBlank { "Umum" } ?: "Umum"
-            val buyPrice = tokens.getOrNull(3)?.replace(",", ".")?.toDoubleOrNull() ?: 0.0
-            val sellPrice = tokens.getOrNull(4)?.replace(",", ".")?.toDoubleOrNull() ?: 0.0
-            val stock = tokens.getOrNull(5)?.replace(",", ".")?.toDoubleOrNull() ?: 0.0
-            val unit = tokens.getOrNull(6)?.trim()?.ifBlank { "Pcs" } ?: "Pcs"
-            val minStock = tokens.getOrNull(7)?.replace(",", ".")?.toDoubleOrNull() ?: 5.0
-            val wholesalePrice = tokens.getOrNull(8)?.replace(",", ".")?.toDoubleOrNull() ?: 0.0
-            val wholesaleMinQty = tokens.getOrNull(9)?.replace(",", ".")?.toDoubleOrNull() ?: 0.0
-            val supplier = tokens.getOrNull(10)?.trim() ?: ""
-            val description = tokens.getOrNull(11)?.trim() ?: ""
+            if (hasSkuColumn) {
+                sku = tokens.getOrNull(0)?.trim() ?: ""
+                barcode = tokens.getOrNull(1)?.trim() ?: ""
+                name = tokens.getOrNull(2)?.trim() ?: ""
+                category = tokens.getOrNull(3)?.trim()?.ifBlank { "Umum" } ?: "Umum"
+                buyPrice = tokens.getOrNull(4)?.replace(",", ".")?.toDoubleOrNull() ?: 0.0
+                sellPrice = tokens.getOrNull(5)?.replace(",", ".")?.toDoubleOrNull() ?: 0.0
+                stock = tokens.getOrNull(6)?.replace(",", ".")?.toDoubleOrNull() ?: 0.0
+                unit = tokens.getOrNull(7)?.trim()?.ifBlank { "Pcs" } ?: "Pcs"
+                minStock = tokens.getOrNull(8)?.replace(",", ".")?.toDoubleOrNull() ?: 5.0
+                wholesalePrice = tokens.getOrNull(9)?.replace(",", ".")?.toDoubleOrNull() ?: 0.0
+                wholesaleMinQty = tokens.getOrNull(10)?.replace(",", ".")?.toDoubleOrNull() ?: 0.0
+                supplier = tokens.getOrNull(11)?.trim() ?: ""
+                description = tokens.getOrNull(12)?.trim() ?: ""
+            } else {
+                sku = ""
+                barcode = tokens.getOrNull(0)?.trim() ?: ""
+                name = tokens.getOrNull(1)?.trim() ?: ""
+                category = tokens.getOrNull(2)?.trim()?.ifBlank { "Umum" } ?: "Umum"
+                buyPrice = tokens.getOrNull(3)?.replace(",", ".")?.toDoubleOrNull() ?: 0.0
+                sellPrice = tokens.getOrNull(4)?.replace(",", ".")?.toDoubleOrNull() ?: 0.0
+                stock = tokens.getOrNull(5)?.replace(",", ".")?.toDoubleOrNull() ?: 0.0
+                unit = tokens.getOrNull(6)?.trim()?.ifBlank { "Pcs" } ?: "Pcs"
+                minStock = tokens.getOrNull(7)?.replace(",", ".")?.toDoubleOrNull() ?: 5.0
+                wholesalePrice = tokens.getOrNull(8)?.replace(",", ".")?.toDoubleOrNull() ?: 0.0
+                wholesaleMinQty = tokens.getOrNull(9)?.replace(",", ".")?.toDoubleOrNull() ?: 0.0
+                supplier = tokens.getOrNull(10)?.trim() ?: ""
+                description = tokens.getOrNull(11)?.trim() ?: ""
+            }
+
+            if (name.isBlank()) continue
 
             products.add(
                 Product(
                     id = 0L,
                     barcode = barcode,
+                    sku = sku,
                     name = name,
                     category = category,
                     buyPrice = buyPrice,

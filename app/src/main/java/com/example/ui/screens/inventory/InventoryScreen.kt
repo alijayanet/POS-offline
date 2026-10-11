@@ -708,8 +708,13 @@ private fun InventoryProductCard(
                         overflow = TextOverflow.Ellipsis
                     )
                     Spacer(modifier = Modifier.height(2.dp))
+                    val codeInfo = buildList {
+                        if (product.sku.isNotBlank()) add("SKU: ${product.sku}")
+                        if (product.barcode.isNotBlank()) add("Barcode: ${product.barcode}")
+                    }.joinToString(" • ")
+
                     Text(
-                        text = "${product.category} • ${if (product.barcode.isNotBlank()) "SKU: ${product.barcode}" else "Tanpa SKU"}",
+                        text = "${product.category}${if (codeInfo.isNotBlank()) " • $codeInfo" else ""}",
                         style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -854,7 +859,7 @@ fun PrintBarcodeLabelDialog(
     onDismiss: () -> Unit
 ) {
     var copies by remember { mutableStateOf(1) }
-    val barcodeText = product.barcode.ifBlank { product.id.toString() }
+    val barcodeText = product.barcode.ifBlank { product.sku.ifBlank { product.id.toString() } }
     val barcodeBitmap = remember(barcodeText) {
         QrCodeGenerator.generateBarcodeBitmap(barcodeText, 400, 140)
     }

@@ -25,10 +25,12 @@
 - Cetak struk thermal kuitansi, kirim nota rincian ke WhatsApp pembeli, dan simpan langsung ke riwayat pembukuan toko.
 
 ### 3. 📦 Manajemen Stok & Inventaris Barang
-- Manajemen katalog barang lengkap: SKU/Barcode, Kategori, Harga Beli (Modal), Harga Jual, dan Jumlah Stok.
+- **Pemisahan SKU & Barcode Produk**: Membedakan **Kode SKU Toko (Internal)** dengan **Barcode Produk (Bawaan Pabrik/Kemasan)** sehingga toko dapat menggunakan barcode asli pada kemasan sekaligus kode internal.
+- **Scanner Barcode Kamera Langsung**: Scan barcode kemasan produk langsung dari kamera smartphone saat input produk baru tanpa alat scan fisik tambahan.
+- **Auto-Generate SKU**: Tombol penomoran otomatis SKU toko untuk barang tanpa kemasan/barcode.
 - **Cetak Label Barcode Barang**: Cetak stiker label barcode 1D (Code128) langsung ke printer Bluetooth thermal.
 - **Notifikasi Stok Menipis**: Peringatan visual otomatis untuk produk yang stoknya hampir habis.
-- **Import & Export Excel / CSV**: Impor ribuan data barang dari file spreadsheet CSV/Excel dan ekspor stok toko dengan sekali klik.
+- **Import & Export Excel / CSV**: Impor ribuan data barang lengkap dengan SKU & Barcode dari spreadsheet CSV/Excel dan ekspor stok toko dengan sekali klik.
 
 ### 4. 📄 Tagihan Pelanggan Bulanan (WiFi / TV Kabel / Iuran)
 - Pengelolaan master data pelanggan bulanan dengan paket langganan dan tanggal jatuh tempo.
