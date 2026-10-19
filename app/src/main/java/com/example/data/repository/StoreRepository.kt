@@ -445,6 +445,18 @@ class StoreRepository(private val db: AppDatabase) {
         db.collectorDao().markAllDepositedForCollector(collectorId)
     }
 
+    suspend fun markLogDeposited(id: String) = withContext(Dispatchers.IO) {
+        db.collectorDao().markLogDeposited(id)
+    }
+
+    suspend fun markAllLogsDeposited() = withContext(Dispatchers.IO) {
+        db.collectorDao().markAllLogsDeposited()
+    }
+
+    suspend fun saveDepositLog(log: com.example.data.model.CollectorDepositLog) = withContext(Dispatchers.IO) {
+        db.collectorDao().insertDepositLog(log)
+    }
+
     private fun generateInvoiceNumber(): String {
         val dateFormat = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.getDefault())
         return "INV-" + dateFormat.format(Date())

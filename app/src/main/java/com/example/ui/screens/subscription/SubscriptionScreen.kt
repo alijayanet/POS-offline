@@ -55,6 +55,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.FloatingActionButton
@@ -65,10 +66,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
+import androidx.compose.material.icons.filled.PersonAdd
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -162,6 +168,15 @@ fun SubscriptionScreen(
 
     var pendingImportSubCustomers by remember { mutableStateOf<List<SubscriptionCustomer>?>(null) }
     var showImportSubCustomerConfirmDialog by remember { mutableStateOf(false) }
+    var isAddingCollector by remember { mutableStateOf(false) }
+
+    val exportCollectorLogsLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("text/csv")
+    ) { uri ->
+        if (uri != null) {
+            viewModel.exportCollectorLogsToUri(context, uri)
+        }
+    }
 
     val importSubCustomerCsvLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -199,6 +214,14 @@ fun SubscriptionScreen(
                 ) {
                     Icon(Icons.Default.Add, contentDescription = "Tambah Paket")
                 }
+            } else if (!isCollectorMode && selectedTab == 4) {
+                ExtendedFloatingActionButton(
+                    onClick = { isAddingCollector = true },
+                    containerColor = EditorialPrimaryBlue,
+                    contentColor = EditorialCardWhite,
+                    icon = { Icon(Icons.Default.PersonAdd, contentDescription = null) },
+                    text = { Text("Tambah Kolektor", fontWeight = FontWeight.Bold) }
+                )
             }
         }
     ) { paddingValues ->
@@ -293,8 +316,9 @@ fun SubscriptionScreen(
 
             // Tab Selector
             item {
-                TabRow(
+                ScrollableTabRow(
                     selectedTabIndex = selectedTab,
+                    edgePadding = 12.dp,
                     containerColor = EditorialCardWhite,
                     contentColor = EditorialPrimaryBlue,
                     modifier = Modifier
@@ -767,14 +791,26 @@ fun SubscriptionScreen(
                 }
             }
 
-            // Tab 4: Kelola Kolektor Lapangan (Khusus Admin)
+            // Tab 4: Kelola Kolektor Lapangan & Laporan Setoran (Khusus Admin)
             else if (!isCollectorMode && selectedTab == 4) {
                 item {
                     CollectorManagementSection(
                         collectors = uiState.collectors,
+                        depositLogs = uiState.depositLogs,
                         onAddCollector = { newCol -> viewModel.saveCollector(newCol) },
                         onEditCollector = { updatedCol -> viewModel.saveCollector(updatedCol) },
-                        onDeleteCollector = { col -> viewModel.deleteCollector(col) }
+                        onDeleteCollector = { col -> viewModel.deleteCollector(col) },
+                        onMarkLogDeposited = { logId -> viewModel.markLogDeposited(logId) },
+                        onMarkCollectorDeposited = { colId -> viewModel.markCollectorDeposited(colId) },
+                        onMarkAllLogsDeposited = { viewModel.markAllLogsDeposited() },
+                        onExportExcel = {
+                            val timeStr = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+                            exportCollectorLogsLauncher.launch("Laporan_Kolektor_$timeStr.csv")
+                        },
+                        onShareReport = { viewModel.shareCollectorLogs(context) },
+                        isAddingCollector = isAddingCollector,
+                        onOpenAddCollector = { isAddingCollector = true },
+                        onDismissAddCollector = { isAddingCollector = false }
                     )
                 }
             }

@@ -273,6 +273,75 @@ object DynamicFirebaseManager {
             }
     }
 
+    fun startListeningDepositLogUpdates(
+        context: Context,
+        onLogReceived: (CollectorDepositLog) -> Unit
+    ) {
+        val firestore = getFirestore(context) ?: return
+        val storeId = getSyncConfig(context).storeId
+        if (storeId.isEmpty()) return
+
+        collectorListener?.remove()
+        collectorListener = firestore.collection("stores").document(storeId)
+            .collection("collector_deposit_logs")
+            .addSnapshotListener { snapshot, e ->
+                if (e != null) {
+                    Log.w(TAG, "Listen failed for collector logs", e)
+                    return@addSnapshotListener
+                }
+                if (snapshot != null) {
+                    for (doc in snapshot.documentChanges) {
+                        try {
+                            val data = doc.document.data
+                            val id = doc.document.id
+                            val collectorId = data["collectorId"] as? String ?: ""
+                            val collectorName = data["collectorName"] as? String ?: ""
+                            val customerId = (data["customerId"] as? Number)?.toLong() ?: 0L
+                            val customerCode = data["customerCode"] as? String ?: ""
+                            val customerName = data["customerName"] as? String ?: ""
+                            val amountPaid = (data["amountPaid"] as? Number)?.toDouble() ?: 0.0
+                            val paidAt = (data["paidAt"] as? Number)?.toLong() ?: System.currentTimeMillis()
+                            val isDepositedToAdmin = data["depositedToAdmin"] as? Boolean ?: (data["isDepositedToAdmin"] as? Boolean ?: false)
+                            val depositedAt = (data["depositedAt"] as? Number)?.toLong()
+
+                            val log = CollectorDepositLog(
+                                id = id,
+                                collectorId = collectorId,
+                                collectorName = collectorName,
+                                customerId = customerId,
+                                customerCode = customerCode,
+                                customerName = customerName,
+                                amountPaid = amountPaid,
+                                paidAt = paidAt,
+                                isDepositedToAdmin = isDepositedToAdmin,
+                                depositedAt = depositedAt
+                            )
+                            onLogReceived(log)
+                        } catch (err: Exception) {
+                            Log.e(TAG, "Error parsing remote deposit log", err)
+                        }
+                    }
+                }
+            }
+    }
+
+    suspend fun markDepositLogOnCloud(context: Context, logId: String) {
+        val firestore = getFirestore(context) ?: return
+        val storeId = getSyncConfig(context).storeId
+        try {
+            firestore.collection("stores").document(storeId)
+                .collection("collector_deposit_logs").document(logId)
+                .update(
+                    mapOf(
+                        "isDepositedToAdmin" to true,
+                        "depositedAt" to System.currentTimeMillis()
+                    )
+                ).await()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to update deposit status on cloud", e)
+        }
+    }
+
     fun stopListening() {
         customerListener?.remove()
         customerListener = null
@@ -280,3 +349,4 @@ object DynamicFirebaseManager {
         collectorListener = null
     }
 }
+

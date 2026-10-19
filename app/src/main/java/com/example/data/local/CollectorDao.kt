@@ -60,6 +60,12 @@ interface CollectorDao {
     @Query("UPDATE collector_deposit_logs SET isDepositedToAdmin = 1, depositedAt = :depositedAt WHERE collectorId = :collectorId AND isDepositedToAdmin = 0")
     suspend fun markAllDepositedForCollector(collectorId: String, depositedAt: Long = System.currentTimeMillis())
 
+    @Query("UPDATE collector_deposit_logs SET isDepositedToAdmin = 1, depositedAt = :depositedAt WHERE id = :id")
+    suspend fun markLogDeposited(id: String, depositedAt: Long = System.currentTimeMillis())
+
+    @Query("UPDATE collector_deposit_logs SET isDepositedToAdmin = 1, depositedAt = :depositedAt WHERE isDepositedToAdmin = 0")
+    suspend fun markAllLogsDeposited(depositedAt: Long = System.currentTimeMillis())
+
     @Query("SELECT SUM(amountPaid) FROM collector_deposit_logs WHERE collectorId = :collectorId AND isDepositedToAdmin = 0")
     fun getUndepositedTotalByCollector(collectorId: String): Flow<Double?>
 }

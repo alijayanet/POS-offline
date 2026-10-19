@@ -456,4 +456,49 @@ object CsvSpreadsheetUtils {
         }
         return customers
     }
+
+    /**
+     * Export Collector transactions & deposits to Excel / CSV format
+     */
+    fun exportCollectorDepositLogsToCsv(logs: List<com.example.data.model.CollectorDepositLog>): String {
+        val sb = StringBuilder()
+        sb.append(UTF8_BOM)
+
+        val dateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+        val totalAmount = logs.sumOf { it.amountPaid }
+        val undepositedLogs = logs.filter { !it.isDepositedToAdmin }
+        val undepositedAmount = undepositedLogs.sumOf { it.amountPaid }
+        val depositedLogs = logs.filter { it.isDepositedToAdmin }
+        val depositedAmount = depositedLogs.sumOf { it.amountPaid }
+
+        // Report Title and Summary
+        sb.append("LAPORAN TRANSAKSI & SETORAN KOLEKTOR LAPANGAN\n")
+        sb.append("Tanggal Cetak:,").append(dateFormat.format(Date())).append("\n")
+        sb.append("Total Transaksi Masuk:,").append(logs.size).append("\n")
+        sb.append("Total Uang Tagihan Diterima (Rp):,").append(totalAmount.toLong()).append("\n")
+        sb.append("Sudah Disetor ke Kasir (Rp):,").append(depositedAmount.toLong()).append("\n")
+        sb.append("Belum Disetor ke Kasir (Rp):,").append(undepositedAmount.toLong()).append("\n\n")
+
+        // Detail Table Header
+        sb.append("No,Tanggal & Jam,No Kuitansi/ID,Nama Kolektor,ID Pelanggan,Nama Pelanggan,Nominal Bayar (Rp),Status Setor,Waktu Setor ke Kasir\n")
+
+        for ((index, log) in logs.withIndex()) {
+            val paidDateStr = dateFormat.format(Date(log.paidAt))
+            val statusStr = if (log.isDepositedToAdmin) "SUDAH DISETOR" else "BELUM DISETOR"
+            val depositDateStr = if (log.depositedAt != null) dateFormat.format(Date(log.depositedAt)) else "-"
+
+            sb.append(index + 1).append(",")
+            sb.append(escapeCsv(paidDateStr)).append(",")
+            sb.append(escapeCsv(log.id)).append(",")
+            sb.append(escapeCsv(log.collectorName)).append(",")
+            sb.append(escapeCsv(log.customerCode)).append(",")
+            sb.append(escapeCsv(log.customerName)).append(",")
+            sb.append(log.amountPaid.toLong()).append(",")
+            sb.append(escapeCsv(statusStr)).append(",")
+            sb.append(escapeCsv(depositDateStr)).append("\n")
+        }
+
+        return sb.toString()
+    }
 }
+

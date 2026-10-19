@@ -23,6 +23,7 @@ import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.PointOfSale
 import androidx.compose.material.icons.filled.Receipt
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -202,6 +203,7 @@ fun MainScreen(
                         Surface(
                             shape = RoundedCornerShape(12.dp),
                             color = EditorialBlueContainer,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, EditorialPrimaryBlue.copy(alpha = 0.3f)),
                             modifier = Modifier.clickable { showCollectorScanDialog = true }
                         ) {
                             Row(
@@ -209,12 +211,12 @@ fun MainScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
-                                    Icons.Default.Search, // or QrCode
-                                    contentDescription = "Scan Kolektor",
+                                    Icons.Default.QrCodeScanner,
+                                    contentDescription = "Scan QR Kolektor",
                                     tint = EditorialPrimaryBlue,
                                     modifier = Modifier.size(16.dp)
                                 )
-                                Spacer(modifier = Modifier.width(4.dp))
+                                Spacer(modifier = Modifier.width(5.dp))
                                 Text(
                                     text = "Scan Kolektor",
                                     fontSize = 11.sp,

@@ -48,6 +48,7 @@ data class SubscriptionUiState(
     val customers: List<SubscriptionCustomer> = emptyList(),
     val payments: List<SubscriptionPayment> = emptyList(),
     val collectors: List<com.example.data.model.Collector> = emptyList(),
+    val depositLogs: List<com.example.data.model.CollectorDepositLog> = emptyList(),
     val storeProfile: StoreProfile? = null,
     val selectedFilter: BillingFilter = BillingFilter.ALL,
     val searchQuery: String = "",
@@ -83,6 +84,7 @@ class SubscriptionViewModel(application: Application) : AndroidViewModel(applica
             repository.allSubscriptionPackages,
             repository.allSubscriptionPayments,
             repository.allCollectors,
+            repository.allDepositLogs,
             repository.storeProfile,
             _selectedFilter,
             _searchQuery,
@@ -96,10 +98,12 @@ class SubscriptionViewModel(application: Application) : AndroidViewModel(applica
             val payments = args[2] as List<SubscriptionPayment>
             @Suppress("UNCHECKED_CAST")
             val collectors = args[3] as List<com.example.data.model.Collector>
-            val profile = args[4] as? StoreProfile
-            val filter = args[5] as BillingFilter
-            val query = args[6] as String
-            val msg = args[7] as? String
+            @Suppress("UNCHECKED_CAST")
+            val depositLogs = args[4] as List<com.example.data.model.CollectorDepositLog>
+            val profile = args[5] as? StoreProfile
+            val filter = args[6] as BillingFilter
+            val query = args[7] as String
+            val msg = args[8] as? String
 
             val currentTime = System.currentTimeMillis()
 
@@ -137,6 +141,7 @@ class SubscriptionViewModel(application: Application) : AndroidViewModel(applica
                 customers = customers,
                 payments = payments,
                 collectors = collectors,
+                depositLogs = depositLogs,
                 storeProfile = profile,
                 selectedFilter = filter,
                 searchQuery = query,
@@ -161,6 +166,11 @@ class SubscriptionViewModel(application: Application) : AndroidViewModel(applica
             DynamicFirebaseManager.startListeningCustomerUpdates(application) { remoteCustomer ->
                 viewModelScope.launch {
                     repository.saveSubscriptionCustomer(remoteCustomer)
+                }
+            }
+            DynamicFirebaseManager.startListeningDepositLogUpdates(application) { remoteLog ->
+                viewModelScope.launch {
+                    repository.saveDepositLog(remoteLog)
                 }
             }
         }
@@ -219,6 +229,72 @@ class SubscriptionViewModel(application: Application) : AndroidViewModel(applica
         viewModelScope.launch {
             repository.deleteCollector(collector)
             _message.value = "Kolektor telah dihapus"
+        }
+    }
+
+    fun markCollectorDeposited(collectorId: String) {
+        viewModelScope.launch {
+            repository.markAllDepositedForCollector(collectorId)
+            val config = DynamicFirebaseManager.getSyncConfig(getApplication())
+            if (config.isEnabled) {
+                val undeposited = uiState.value.depositLogs.filter { it.collectorId == collectorId && !it.isDepositedToAdmin }
+                for (log in undeposited) {
+                    DynamicFirebaseManager.markDepositLogOnCloud(getApplication(), log.id)
+                }
+            }
+            _message.value = "Semua setoran kolektor berhasil ditandai telah disetor"
+        }
+    }
+
+    fun markLogDeposited(logId: String) {
+        viewModelScope.launch {
+            repository.markLogDeposited(logId)
+            val config = DynamicFirebaseManager.getSyncConfig(getApplication())
+            if (config.isEnabled) {
+                DynamicFirebaseManager.markDepositLogOnCloud(getApplication(), logId)
+            }
+            _message.value = "Setoran berhasil diterima dan ditandai lunas disetor"
+        }
+    }
+
+    fun markAllLogsDeposited() {
+        viewModelScope.launch {
+            repository.markAllLogsDeposited()
+            val config = DynamicFirebaseManager.getSyncConfig(getApplication())
+            if (config.isEnabled) {
+                val undeposited = uiState.value.depositLogs.filter { !it.isDepositedToAdmin }
+                for (log in undeposited) {
+                    DynamicFirebaseManager.markDepositLogOnCloud(getApplication(), log.id)
+                }
+            }
+            _message.value = "Semua setoran uang kolektor berhasil diterima kasir"
+        }
+    }
+
+    fun exportCollectorLogsToUri(context: android.content.Context, uri: android.net.Uri) {
+        viewModelScope.launch {
+            val logs = uiState.value.depositLogs
+            val csv = com.example.util.CsvSpreadsheetUtils.exportCollectorDepositLogsToCsv(logs)
+            val result = com.example.util.CsvSpreadsheetUtils.writeCsvToUri(context, uri, csv)
+            if (result.isSuccess) {
+                _message.value = "Berhasil mengekspor ${logs.size} transaksi kolektor ke Excel / CSV"
+            } else {
+                _message.value = "Gagal mengekspor: ${result.exceptionOrNull()?.message}"
+            }
+        }
+    }
+
+    fun shareCollectorLogs(context: android.content.Context) {
+        viewModelScope.launch {
+            val logs = uiState.value.depositLogs
+            val csv = com.example.util.CsvSpreadsheetUtils.exportCollectorDepositLogsToCsv(logs)
+            val fileName = "Laporan_Kolektor_${SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())}.csv"
+            com.example.util.CsvSpreadsheetUtils.shareCsvFile(
+                context = context,
+                csvString = csv,
+                fileName = fileName,
+                subject = "Laporan Transaksi & Setoran Kolektor TokoPOS"
+            )
         }
     }
 
