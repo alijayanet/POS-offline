@@ -402,6 +402,49 @@ class StoreRepository(private val db: AppDatabase) {
         paymentId
     }
 
+    // --- Collector Operations ---
+    val allCollectors: Flow<List<com.example.data.model.Collector>> = db.collectorDao().getAllCollectors()
+    val activeCollectors: Flow<List<com.example.data.model.Collector>> = db.collectorDao().getActiveCollectors()
+    val allDepositLogs: Flow<List<com.example.data.model.CollectorDepositLog>> = db.collectorDao().getAllDepositLogs()
+
+    suspend fun getCollectorById(id: String): com.example.data.model.Collector? = withContext(Dispatchers.IO) {
+        db.collectorDao().getCollectorById(id)
+    }
+
+    suspend fun saveCollector(collector: com.example.data.model.Collector) = withContext(Dispatchers.IO) {
+        db.collectorDao().insertCollector(collector)
+    }
+
+    suspend fun deleteCollector(collector: com.example.data.model.Collector) = withContext(Dispatchers.IO) {
+        db.collectorDao().deleteCollector(collector)
+    }
+
+    suspend fun deleteCollectorById(id: String) = withContext(Dispatchers.IO) {
+        db.collectorDao().deleteCollectorById(id)
+    }
+
+    suspend fun recordCollectorPayment(
+        depositLog: com.example.data.model.CollectorDepositLog,
+        payment: com.example.data.model.SubscriptionPayment,
+        newPaidUntilTimestamp: Long
+    ) = withContext(Dispatchers.IO) {
+        db.collectorDao().insertDepositLog(depositLog)
+        recordSubscriptionPayment(payment, newPaidUntilTimestamp)
+    }
+
+    fun getLogsByCollector(collectorId: String): Flow<List<com.example.data.model.CollectorDepositLog>> =
+        db.collectorDao().getLogsByCollector(collectorId)
+
+    fun getUndepositedLogsByCollector(collectorId: String): Flow<List<com.example.data.model.CollectorDepositLog>> =
+        db.collectorDao().getUndepositedLogsByCollector(collectorId)
+
+    fun getUndepositedTotalByCollector(collectorId: String): Flow<Double?> =
+        db.collectorDao().getUndepositedTotalByCollector(collectorId)
+
+    suspend fun markAllDepositedForCollector(collectorId: String) = withContext(Dispatchers.IO) {
+        db.collectorDao().markAllDepositedForCollector(collectorId)
+    }
+
     private fun generateInvoiceNumber(): String {
         val dateFormat = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.getDefault())
         return "INV-" + dateFormat.format(Date())

@@ -112,6 +112,9 @@ import com.example.ui.theme.EditorialTextDark
 import com.example.ui.theme.PrimaryGreen
 import com.example.ui.theme.PrimaryGreenContainer
 import com.example.util.SubscriptionWhatsAppUtils
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.TextButton
+import com.example.util.DynamicFirebaseManager
 
 @Composable
 fun SubscriptionScreen(
@@ -122,7 +125,12 @@ fun SubscriptionScreen(
     val scope = rememberCoroutineScope()
 
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabTitles = listOf("Tagihan & Tempo", "Data Pelanggan", "Paket Langganan", "Riwayat Bayar")
+    val isCollectorMode = uiState.activeRole == "COLLECTOR"
+    val tabTitles = if (isCollectorMode) {
+        listOf("Tagihan & Tempo", "Riwayat Bayar")
+    } else {
+        listOf("Tagihan & Tempo", "Data Pelanggan", "Paket Langganan", "Riwayat Bayar", "Kolektor Lapangan")
+    }
 
     var customerToEdit by remember { mutableStateOf<SubscriptionCustomer?>(null) }
     var isAddingCustomer by remember { mutableStateOf(false) }
@@ -202,6 +210,59 @@ fun SubscriptionScreen(
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 80.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
+            // Collector Mode Active Banner
+            if (isCollectorMode) {
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(1.dp, EditorialPrimaryBlue.copy(alpha = 0.5f), RoundedCornerShape(16.dp)),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = EditorialBlueContainer)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                Icon(Icons.Default.Person, contentDescription = null, tint = EditorialPrimaryBlue)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column {
+                                    Text(
+                                        text = "MODE KOLEKTOR PENAGIH",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = EditorialPrimaryBlue,
+                                            fontWeight = FontWeight.Bold,
+                                            letterSpacing = 1.sp
+                                        )
+                                    )
+                                    Text(
+                                        text = uiState.activeCollectorName.ifEmpty { "Petugas Lapangan" },
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = EditorialNavy
+                                    )
+                                }
+                            }
+
+                            TextButton(
+                                onClick = {
+                                    DynamicFirebaseManager.resetToAdminRole(context)
+                                    Toast.makeText(context, "Beralih kembali ke Mode Admin", Toast.LENGTH_SHORT).show()
+                                    // Activity reload or recreate
+                                    (context as? android.app.Activity)?.recreate()
+                                }
+                            ) {
+                                Text("Keluar", color = AlertRed, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
+
             // Header Stats Cards
             item {
                 Row(
@@ -615,7 +676,7 @@ fun SubscriptionScreen(
             }
 
             // Tab 3: Riwayat Pembayaran Langganan
-            else {
+            else if ((isCollectorMode && selectedTab == 1) || (!isCollectorMode && selectedTab == 3)) {
                 if (uiState.payments.isEmpty()) {
                     item {
                         Box(
@@ -703,6 +764,18 @@ fun SubscriptionScreen(
                             }
                         )
                     }
+                }
+            }
+
+            // Tab 4: Kelola Kolektor Lapangan (Khusus Admin)
+            else if (!isCollectorMode && selectedTab == 4) {
+                item {
+                    CollectorManagementSection(
+                        collectors = uiState.collectors,
+                        onAddCollector = { newCol -> viewModel.saveCollector(newCol) },
+                        onEditCollector = { updatedCol -> viewModel.saveCollector(updatedCol) },
+                        onDeleteCollector = { col -> viewModel.deleteCollector(col) }
+                    )
                 }
             }
         }

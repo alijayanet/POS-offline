@@ -37,8 +37,12 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -101,8 +105,15 @@ fun MainScreen(
     val expensesViewModel: com.example.ui.screens.expenses.ExpensesViewModel = viewModel()
     val subscriptionViewModel: com.example.ui.screens.subscription.SubscriptionViewModel = viewModel()
 
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val roleInfo = remember { com.example.util.DynamicFirebaseManager.getRoleInfo(context) }
+    val isCollectorRole = roleInfo.first == "COLLECTOR"
+    val collectorName = roleInfo.second.second
+
+    var showCollectorScanDialog by remember { mutableStateOf(false) }
+
     val dashUiState by dashboardViewModel.uiState.collectAsStateWithLifecycle()
-    val storeName = dashUiState.storeProfile?.storeName ?: "Toko Ali Jaya"
+    val storeName = if (isCollectorRole) "Kolektor: $collectorName" else (dashUiState.storeProfile?.storeName ?: "Toko Ali Jaya")
 
     Scaffold(
         containerColor = EditorialBackground,
@@ -183,10 +194,46 @@ fun MainScreen(
                             fontSize = 10.sp
                         )
                     }
+
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    // If not in collector mode, show quick "Login Kolektor" button
+                    if (!isCollectorRole) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = EditorialBlueContainer,
+                            modifier = Modifier.clickable { showCollectorScanDialog = true }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.Search, // or QrCode
+                                    contentDescription = "Scan Kolektor",
+                                    tint = EditorialPrimaryBlue,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "Scan Kolektor",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = EditorialPrimaryBlue
+                                )
+                            }
+                        }
+                    }
                 }
             }
         },
         bottomBar = {
+            val navItems = if (isCollectorRole) {
+                listOf(Screen.Subscription, Screen.Settings)
+            } else {
+                BottomNavItems
+            }
+
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -200,7 +247,7 @@ fun MainScreen(
                     tonalElevation = 0.dp,
                     modifier = Modifier.height(64.dp)
                 ) {
-                    BottomNavItems.forEach { screen ->
+                    navItems.forEach { screen ->
                         val isSelected = currentRoute == screen.route
                         NavigationBarItem(
                             icon = {
@@ -272,7 +319,7 @@ fun MainScreen(
         ) {
             NavHost(
                 navController = navController,
-                startDestination = Screen.Dashboard.route,
+                startDestination = if (isCollectorRole) Screen.Subscription.route else Screen.Dashboard.route,
                 modifier = Modifier.fillMaxSize()
             ) {
                 composable(Screen.Dashboard.route) {
@@ -346,5 +393,15 @@ fun MainScreen(
                 }
             }
         }
+    }
+
+    if (showCollectorScanDialog) {
+        com.example.ui.components.CollectorPairingScanDialog(
+            onDismiss = { showCollectorScanDialog = false },
+            onSuccess = { name ->
+                showCollectorScanDialog = false
+                (context as? android.app.Activity)?.recreate()
+            }
+        )
     }
 }

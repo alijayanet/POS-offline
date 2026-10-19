@@ -19,6 +19,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import com.example.util.DynamicFirebaseManager
 
 enum class BillingFilter(val displayName: String) {
     ALL("Semua Tagihan"),
@@ -46,6 +47,7 @@ data class SubscriptionUiState(
     val packages: List<SubscriptionPackage> = emptyList(),
     val customers: List<SubscriptionCustomer> = emptyList(),
     val payments: List<SubscriptionPayment> = emptyList(),
+    val collectors: List<com.example.data.model.Collector> = emptyList(),
     val storeProfile: StoreProfile? = null,
     val selectedFilter: BillingFilter = BillingFilter.ALL,
     val searchQuery: String = "",
@@ -53,6 +55,10 @@ data class SubscriptionUiState(
     val totalOverdueAmount: Double = 0.0,
     val totalActiveCustomers: Int = 0,
     val totalMonthlyRevenuePotential: Double = 0.0,
+    val isCloudSyncEnabled: Boolean = false,
+    val activeRole: String = "ADMIN", // "ADMIN" or "COLLECTOR"
+    val activeCollectorName: String = "",
+    val activeCollectorId: String = "",
     val message: String? = null
 )
 
@@ -69,10 +75,14 @@ class SubscriptionViewModel(application: Application) : AndroidViewModel(applica
         val db = AppDatabase.getInstance(application)
         repository = StoreRepository(db)
 
+        val roleInfo = DynamicFirebaseManager.getRoleInfo(application)
+        val syncConfig = DynamicFirebaseManager.getSyncConfig(application)
+
         uiState = combine(
             repository.allSubscriptionCustomers,
             repository.allSubscriptionPackages,
             repository.allSubscriptionPayments,
+            repository.allCollectors,
             repository.storeProfile,
             _selectedFilter,
             _searchQuery,
@@ -84,10 +94,12 @@ class SubscriptionViewModel(application: Application) : AndroidViewModel(applica
             val packages = args[1] as List<SubscriptionPackage>
             @Suppress("UNCHECKED_CAST")
             val payments = args[2] as List<SubscriptionPayment>
-            val profile = args[3] as? StoreProfile
-            val filter = args[4] as BillingFilter
-            val query = args[5] as String
-            val msg = args[6] as? String
+            @Suppress("UNCHECKED_CAST")
+            val collectors = args[3] as List<com.example.data.model.Collector>
+            val profile = args[4] as? StoreProfile
+            val filter = args[5] as BillingFilter
+            val query = args[6] as String
+            val msg = args[7] as? String
 
             val currentTime = System.currentTimeMillis()
 
@@ -124,6 +136,7 @@ class SubscriptionViewModel(application: Application) : AndroidViewModel(applica
                 packages = packages,
                 customers = customers,
                 payments = payments,
+                collectors = collectors,
                 storeProfile = profile,
                 selectedFilter = filter,
                 searchQuery = query,
@@ -131,6 +144,10 @@ class SubscriptionViewModel(application: Application) : AndroidViewModel(applica
                 totalOverdueAmount = totalOverdueSum,
                 totalActiveCustomers = activeCustCount,
                 totalMonthlyRevenuePotential = monthlyPotential,
+                isCloudSyncEnabled = syncConfig.isEnabled,
+                activeRole = roleInfo.first,
+                activeCollectorId = roleInfo.second.first,
+                activeCollectorName = roleInfo.second.second,
                 message = msg
             )
         }.stateIn(
@@ -138,6 +155,15 @@ class SubscriptionViewModel(application: Application) : AndroidViewModel(applica
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = SubscriptionUiState()
         )
+
+        // Start listening to real-time Cloud Firestore updates if enabled
+        if (syncConfig.isEnabled) {
+            DynamicFirebaseManager.startListeningCustomerUpdates(application) { remoteCustomer ->
+                viewModelScope.launch {
+                    repository.saveSubscriptionCustomer(remoteCustomer)
+                }
+            }
+        }
     }
 
     fun setFilter(filter: BillingFilter) {
@@ -164,7 +190,10 @@ class SubscriptionViewModel(application: Application) : AndroidViewModel(applica
 
     fun saveCustomer(customer: SubscriptionCustomer) {
         viewModelScope.launch {
-            repository.saveSubscriptionCustomer(customer)
+            val customerId = repository.saveSubscriptionCustomer(customer)
+            val updated = if (customer.id == 0L) customer.copy(id = customerId) else customer
+            // Sync to Firestore if cloud sync is enabled
+            DynamicFirebaseManager.syncCustomerToCloud(getApplication(), updated)
             _message.value = "Data pelanggan langganan berhasil disimpan"
         }
     }
@@ -172,7 +201,24 @@ class SubscriptionViewModel(application: Application) : AndroidViewModel(applica
     fun deleteCustomer(customer: SubscriptionCustomer) {
         viewModelScope.launch {
             repository.deleteSubscriptionCustomer(customer)
+            DynamicFirebaseManager.deleteCustomerFromCloud(getApplication(), customer.id)
             _message.value = "Pelanggan telah dihapus"
+        }
+    }
+
+    // Collector CRUD
+    fun saveCollector(collector: com.example.data.model.Collector) {
+        viewModelScope.launch {
+            repository.saveCollector(collector)
+            DynamicFirebaseManager.syncCollectorToCloud(getApplication(), collector)
+            _message.value = "Kolektor ${collector.name} berhasil disimpan"
+        }
+    }
+
+    fun deleteCollector(collector: com.example.data.model.Collector) {
+        viewModelScope.launch {
+            repository.deleteCollector(collector)
+            _message.value = "Kolektor telah dihapus"
         }
     }
 
@@ -204,6 +250,11 @@ class SubscriptionViewModel(application: Application) : AndroidViewModel(applica
             val periodStart = customer.paidUntilTimestamp
             val periodEnd = newPaidUntil
 
+            val currentState = uiState.value
+            val isCollectorRole = currentState.activeRole == "COLLECTOR"
+            val collectorName = if (isCollectorRole) currentState.activeCollectorName else "Kasir Admin"
+            val collectorId = if (isCollectorRole) currentState.activeCollectorId else "ADMIN"
+
             val payment = SubscriptionPayment(
                 customerId = customer.id,
                 customerCode = customer.customerCode,
@@ -217,10 +268,32 @@ class SubscriptionViewModel(application: Application) : AndroidViewModel(applica
                 totalAmount = totalAmount,
                 paymentMethod = paymentMethod,
                 timestamp = System.currentTimeMillis(),
-                notes = notes
+                notes = if (isCollectorRole) "Diterima Kolektor: $collectorName. $notes" else notes
             )
 
-            repository.recordSubscriptionPayment(payment, newPaidUntil)
+            // If collector, create deposit log
+            if (isCollectorRole) {
+                val depositLog = com.example.data.model.CollectorDepositLog(
+                    id = invoiceNumber,
+                    collectorId = collectorId,
+                    collectorName = collectorName,
+                    customerId = customer.id,
+                    customerCode = customer.customerCode,
+                    customerName = customer.name,
+                    amountPaid = totalAmount,
+                    paidAt = System.currentTimeMillis(),
+                    isDepositedToAdmin = false
+                )
+                repository.recordCollectorPayment(depositLog, payment, newPaidUntil)
+                // Realtime sync to Cloud
+                DynamicFirebaseManager.syncDepositLogToCloud(getApplication(), depositLog, payment, newPaidUntil)
+            } else {
+                repository.recordSubscriptionPayment(payment, newPaidUntil)
+                // Update cloud customer
+                val updatedCust = customer.copy(paidUntilTimestamp = newPaidUntil)
+                DynamicFirebaseManager.syncCustomerToCloud(getApplication(), updatedCust)
+            }
+
             _message.value = "Pembayaran ${customer.name} ($monthsCount Bulan) berhasil dicatat!"
             onSuccess?.invoke(payment, newPaidUntil)
         }

@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.RestartAlt
@@ -67,6 +68,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.model.StoreProfile
 import com.example.ui.theme.EditorialAlertRed
+import com.example.ui.theme.EditorialBackground
 import com.example.ui.theme.EditorialBlueContainer
 import com.example.ui.theme.EditorialCardWhite
 import com.example.ui.theme.EditorialMuted
@@ -190,6 +192,13 @@ fun SettingsScreen(
     var showAddCategoryDialog by remember { mutableStateOf(false) }
     var showResetConfirmDialog by remember { mutableStateOf(false) }
     var showPrivacyPolicyDialog by remember { mutableStateOf(false) }
+
+    // Firebase Cloud Sync Configuration
+    val currentSyncConfig = remember { com.example.util.DynamicFirebaseManager.getSyncConfig(context) }
+    var isCloudSyncEnabled by remember { mutableStateOf(currentSyncConfig.isEnabled) }
+    var firebaseProjectId by remember { mutableStateOf(currentSyncConfig.projectId) }
+    var firebaseApiKey by remember { mutableStateOf(currentSyncConfig.apiKey) }
+    var firebaseAppId by remember { mutableStateOf(currentSyncConfig.applicationId) }
 
     LaunchedEffect(uiState.message) {
         uiState.message?.let {
@@ -499,6 +508,150 @@ fun SettingsScreen(
                         Icon(Icons.Default.Save, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Simpan Data QRIS", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+
+        // Section: Pengaturan Cloud Sync Firebase (Multi-Device Kolektor)
+        item {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, EditorialOutline, RoundedCornerShape(24.dp)),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = EditorialCardWhite)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .clip(CircleShape)
+                                    .background(EditorialBlueContainer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.Cloud, contentDescription = null, tint = EditorialPrimaryBlue)
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "SINKRONISASI CLOUD & KOLEKTOR",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = EditorialMuted,
+                                        letterSpacing = 1.2.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                )
+                                Text(
+                                    text = "Google Firebase Firestore",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = EditorialNavy
+                                )
+                            }
+                        }
+
+                        Switch(
+                            checked = isCloudSyncEnabled,
+                            onCheckedChange = { isCloudSyncEnabled = it }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text(
+                        text = "Sinkronisasi realtime status tagihan dengan HP petugas kolektor di lapangan menggunakan project Firebase Firestore milik Anda sendiri (100% Gratis).",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = EditorialMuted
+                    )
+
+                    if (isCloudSyncEnabled) {
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        OutlinedTextField(
+                            value = firebaseProjectId,
+                            onValueChange = { firebaseProjectId = it },
+                            label = { Text("Firebase Project ID *") },
+                            placeholder = { Text("misal: my-pos-toko") },
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        OutlinedTextField(
+                            value = firebaseApiKey,
+                            onValueChange = { firebaseApiKey = it },
+                            label = { Text("Web API Key Firebase *") },
+                            placeholder = { Text("AIzaSy...") },
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        OutlinedTextField(
+                            value = firebaseAppId,
+                            onValueChange = { firebaseAppId = it },
+                            label = { Text("Application ID (Opsional)") },
+                            placeholder = { Text("1:123456789:android:...") },
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        Button(
+                            onClick = {
+                                if (firebaseProjectId.isBlank() || firebaseApiKey.isBlank()) {
+                                    Toast.makeText(context, "Project ID dan API Key tidak boleh kosong!", Toast.LENGTH_SHORT).show()
+                                    return@Button
+                                }
+                                val newConfig = com.example.util.FirebaseSyncConfig(
+                                    isEnabled = true,
+                                    projectId = firebaseProjectId.trim(),
+                                    apiKey = firebaseApiKey.trim(),
+                                    applicationId = firebaseAppId.trim(),
+                                    storeId = firebaseProjectId.trim()
+                                )
+                                com.example.util.DynamicFirebaseManager.saveSyncConfig(context, newConfig)
+                                Toast.makeText(context, "Konfigurasi Cloud Firebase Berhasil Disimpan!", Toast.LENGTH_LONG).show()
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = EditorialPrimaryBlue),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.Save, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Simpan Konfigurasi Cloud", fontWeight = FontWeight.Bold)
+                        }
+                    } else {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Surface(
+                            color = EditorialBackground,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "Saat nonaktif, aplikasi beroperasi dalam mode 100% Offline lokal di HP ini.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = EditorialMuted,
+                                modifier = Modifier.padding(12.dp)
+                            )
+                        }
                     }
                 }
             }

@@ -39,9 +39,11 @@ import kotlinx.coroutines.launch
         Expense::class,
         SubscriptionPackage::class,
         SubscriptionCustomer::class,
-        SubscriptionPayment::class
+        SubscriptionPayment::class,
+        com.example.data.model.Collector::class,
+        com.example.data.model.CollectorDepositLog::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -57,6 +59,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun purchaseDao(): PurchaseDao
     abstract fun expenseDao(): ExpenseDao
     abstract fun subscriptionDao(): SubscriptionDao
+    abstract fun collectorDao(): CollectorDao
 
     companion object {
         @Volatile
@@ -68,6 +71,35 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS collectors (
+                        id TEXT PRIMARY KEY NOT NULL,
+                        name TEXT NOT NULL,
+                        phone TEXT NOT NULL DEFAULT '',
+                        assignedArea TEXT NOT NULL DEFAULT '',
+                        isActive INTEGER NOT NULL DEFAULT 1,
+                        createdAt INTEGER NOT NULL
+                    )
+                """.trimIndent())
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS collector_deposit_logs (
+                        id TEXT PRIMARY KEY NOT NULL,
+                        collectorId TEXT NOT NULL,
+                        collectorName TEXT NOT NULL,
+                        customerId INTEGER NOT NULL,
+                        customerCode TEXT NOT NULL DEFAULT '',
+                        customerName TEXT NOT NULL,
+                        amountPaid REAL NOT NULL,
+                        paidAt INTEGER NOT NULL,
+                        isDepositedToAdmin INTEGER NOT NULL DEFAULT 0,
+                        depositedAt INTEGER
+                    )
+                """.trimIndent())
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -75,7 +107,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "toko_pos_database.db"
                 )
-                .addMigrations(MIGRATION_6_7)
+                .addMigrations(MIGRATION_6_7, MIGRATION_7_8)
                 .fallbackToDestructiveMigration()
                 .addCallback(object : Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
