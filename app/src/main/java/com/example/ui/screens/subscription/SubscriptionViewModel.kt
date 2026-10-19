@@ -163,6 +163,9 @@ class SubscriptionViewModel(application: Application) : AndroidViewModel(applica
 
         // Start listening to real-time Cloud Firestore updates if enabled
         if (syncConfig.isEnabled) {
+            viewModelScope.launch {
+                pullFromCloudInternal()
+            }
             DynamicFirebaseManager.startListeningCustomerUpdates(application) { remoteCustomer ->
                 viewModelScope.launch {
                     repository.saveSubscriptionCustomer(remoteCustomer)
@@ -173,6 +176,55 @@ class SubscriptionViewModel(application: Application) : AndroidViewModel(applica
                     repository.saveDepositLog(remoteLog)
                 }
             }
+        }
+    }
+
+    fun triggerManualSync() {
+        viewModelScope.launch {
+            val config = DynamicFirebaseManager.getSyncConfig(getApplication())
+            if (!config.isEnabled || config.projectId.isEmpty() || config.apiKey.isEmpty()) {
+                _message.value = "Cloud belum diaktifkan. Silakan isi Project ID & API Key di Pengaturan Toko."
+                return@launch
+            }
+
+            val roleInfo = DynamicFirebaseManager.getRoleInfo(getApplication())
+            val isAdmin = roleInfo.first == "ADMIN"
+
+            if (isAdmin) {
+                val localCustomers = uiState.value.customers
+                if (localCustomers.isNotEmpty()) {
+                    val uploadResult = DynamicFirebaseManager.uploadAllCustomersToCloud(getApplication(), localCustomers)
+                    if (uploadResult.isFailure) {
+                        _message.value = "Gagal kirim ke Cloud: ${uploadResult.exceptionOrNull()?.message}"
+                        return@launch
+                    }
+                }
+            }
+
+            val pullResult = DynamicFirebaseManager.fetchAllCustomersFromCloud(getApplication())
+            if (pullResult.isSuccess) {
+                val remoteList = pullResult.getOrThrow()
+                for (cust in remoteList) {
+                    repository.saveSubscriptionCustomer(cust)
+                }
+                _message.value = "Sinkronisasi Berhasil! (${remoteList.size} Pelanggan tersinkron)"
+            } else {
+                _message.value = "Gagal tarik data Cloud: ${pullResult.exceptionOrNull()?.message}"
+            }
+        }
+    }
+
+    private suspend fun pullFromCloudInternal() {
+        try {
+            val pullResult = DynamicFirebaseManager.fetchAllCustomersFromCloud(getApplication())
+            if (pullResult.isSuccess) {
+                val remoteList = pullResult.getOrThrow()
+                for (cust in remoteList) {
+                    repository.saveSubscriptionCustomer(cust)
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("SubscriptionViewModel", "Failed to pull from cloud", e)
         }
     }
 

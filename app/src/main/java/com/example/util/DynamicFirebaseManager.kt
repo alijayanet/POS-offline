@@ -59,7 +59,14 @@ object DynamicFirebaseManager {
             .putString(KEY_STORE_ID, config.storeId.trim().ifEmpty { config.projectId.trim() })
             .apply()
         
-        // Reinitialize instance if enabled
+        // Reinitialize instance cleanly
+        try {
+            val existing = FirebaseApp.getApps(context).find { it.name == DYNAMIC_APP_NAME }
+            existing?.delete()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error resetting previous FirebaseApp", e)
+        }
+
         if (config.isEnabled && config.projectId.isNotEmpty() && config.apiKey.isNotEmpty()) {
             initFirebaseApp(context, config)
         }
@@ -78,6 +85,27 @@ object DynamicFirebaseManager {
             .putString(KEY_ACTIVE_ROLE, "COLLECTOR")
             .putString(KEY_COLLECTOR_ID, collectorId)
             .putString(KEY_COLLECTOR_NAME, collectorName)
+            .apply()
+    }
+
+    private const val KEY_ADMIN_PIN = "admin_security_pin"
+
+    fun getAdminPin(context: Context): String {
+        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getString(KEY_ADMIN_PIN, "1234") ?: "1234"
+    }
+
+    fun setAdminPin(context: Context, pin: String) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+            .putString(KEY_ADMIN_PIN, pin.trim())
+            .apply()
+    }
+
+    fun logoutCollector(context: Context) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+            .putString(KEY_ACTIVE_ROLE, "UNPAIRED")
+            .remove(KEY_COLLECTOR_ID)
+            .remove(KEY_COLLECTOR_NAME)
             .apply()
     }
 
@@ -224,6 +252,83 @@ object DynamicFirebaseManager {
         }
     }
 
+    suspend fun uploadAllCustomersToCloud(context: Context, customers: List<SubscriptionCustomer>): Result<Int> {
+        val firestore = getFirestore(context)
+            ?: return Result.failure(Exception("Cloud Firebase belum aktif atau API Key belum diisi di Pengaturan Toko!"))
+        val storeId = getSyncConfig(context).storeId
+        if (storeId.isEmpty()) return Result.failure(Exception("Project ID / Store ID kosong."))
+
+        return try {
+            val batch = firestore.batch()
+            for (customer in customers) {
+                val docRef = firestore.collection("stores").document(storeId)
+                    .collection("subscription_customers").document(customer.id.toString())
+                val data = mapOf(
+                    "id" to customer.id,
+                    "customerCode" to customer.customerCode,
+                    "name" to customer.name,
+                    "phone" to customer.phone,
+                    "address" to customer.address,
+                    "packageId" to customer.packageId,
+                    "packageName" to customer.packageName,
+                    "monthlyPrice" to customer.monthlyPrice,
+                    "installationDate" to customer.installationDate,
+                    "dueDay" to customer.dueDay,
+                    "paidUntilTimestamp" to customer.paidUntilTimestamp,
+                    "status" to customer.status,
+                    "notes" to customer.notes,
+                    "updatedAt" to System.currentTimeMillis()
+                )
+                batch.set(docRef, data, SetOptions.merge())
+            }
+            batch.commit().await()
+            Result.success(customers.size)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to upload all customers to cloud", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun fetchAllCustomersFromCloud(context: Context): Result<List<SubscriptionCustomer>> {
+        val firestore = getFirestore(context)
+            ?: return Result.failure(Exception("Cloud Firebase belum aktif atau API Key belum diisi di Pengaturan!"))
+        val storeId = getSyncConfig(context).storeId
+        if (storeId.isEmpty()) return Result.failure(Exception("Project ID / Store ID kosong."))
+
+        return try {
+            val snapshot = firestore.collection("stores").document(storeId)
+                .collection("subscription_customers")
+                .get()
+                .await()
+            val list = mutableListOf<SubscriptionCustomer>()
+            for (doc in snapshot.documents) {
+                val data = doc.data ?: continue
+                val id = (data["id"] as? Number)?.toLong() ?: doc.id.toLongOrNull() ?: continue
+                val cust = SubscriptionCustomer(
+                    id = id,
+                    customerCode = data["customerCode"] as? String ?: "",
+                    name = data["name"] as? String ?: "",
+                    phone = data["phone"] as? String ?: "",
+                    address = data["address"] as? String ?: "",
+                    packageId = (data["packageId"] as? Number)?.toLong() ?: 0L,
+                    packageName = data["packageName"] as? String ?: "",
+                    monthlyPrice = (data["monthlyPrice"] as? Number)?.toDouble() ?: 0.0,
+                    installationDate = (data["installationDate"] as? Number)?.toLong() ?: System.currentTimeMillis(),
+                    dueDay = (data["dueDay"] as? Number)?.toInt() ?: 10,
+                    paidUntilTimestamp = (data["paidUntilTimestamp"] as? Number)?.toLong() ?: 0L,
+                    status = data["status"] as? String ?: "ACTIVE",
+                    notes = data["notes"] as? String ?: "",
+                    updatedAt = (data["updatedAt"] as? Number)?.toLong() ?: System.currentTimeMillis()
+                )
+                list.add(cust)
+            }
+            Result.success(list)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to fetch customers from cloud", e)
+            Result.failure(e)
+        }
+    }
+
     /**
      * Listen for real-time customer updates from cloud
      */
@@ -244,10 +349,10 @@ object DynamicFirebaseManager {
                     return@addSnapshotListener
                 }
                 if (snapshot != null) {
-                    for (doc in snapshot.documentChanges) {
+                    for (doc in snapshot.documents) {
                         try {
-                            val data = doc.document.data
-                            val id = (data["id"] as? Number)?.toLong() ?: doc.document.id.toLongOrNull() ?: continue
+                            val data = doc.data ?: continue
+                            val id = (data["id"] as? Number)?.toLong() ?: doc.id.toLongOrNull() ?: continue
                             val cust = SubscriptionCustomer(
                                 id = id,
                                 customerCode = data["customerCode"] as? String ?: "",

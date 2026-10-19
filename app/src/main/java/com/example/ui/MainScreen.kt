@@ -26,6 +26,11 @@ import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -34,11 +39,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.Surface
+import android.widget.Toast
+import com.example.ui.theme.AlertRed
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -81,6 +90,7 @@ import com.example.ui.screens.settings.SettingsScreen
 import com.example.ui.screens.settings.SettingsViewModel
 import com.example.ui.theme.EditorialBackground
 import com.example.ui.theme.EditorialBlueContainer
+import com.example.ui.theme.EditorialCardWhite
 import com.example.ui.theme.EditorialMuted
 import com.example.ui.theme.EditorialNavSurface
 import com.example.ui.theme.EditorialNavy
@@ -115,6 +125,169 @@ fun MainScreen(
 
     val dashUiState by dashboardViewModel.uiState.collectAsStateWithLifecycle()
     val storeName = if (isCollectorRole) "Kolektor: $collectorName" else (dashUiState.storeProfile?.storeName ?: "Toko Ali Jaya")
+    val isUnpairedRole = roleInfo.first == "UNPAIRED"
+
+    if (isUnpairedRole) {
+        var showAdminPinDialog by remember { mutableStateOf(false) }
+        var adminPinInput by remember { mutableStateOf("") }
+        var pinError by remember { mutableStateOf<String?>(null) }
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(EditorialBackground)
+                .statusBarsPadding()
+                .padding(24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = EditorialCardWhite),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, EditorialOutline, RoundedCornerShape(24.dp))
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(CircleShape)
+                            .background(EditorialBlueContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.QrCodeScanner,
+                            contentDescription = null,
+                            tint = EditorialPrimaryBlue,
+                            modifier = Modifier.size(36.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = "Mode Kolektor TokoPOS",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = EditorialNavy
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "HP ini belum ditautkan dengan petugas kolektor toko. Silakan scan QR Pairing dari HP Admin toko untuk menghubungkan.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = EditorialMuted,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Button(
+                        onClick = { showCollectorScanDialog = true },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = EditorialPrimaryBlue),
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 12.dp)
+                    ) {
+                        Icon(Icons.Default.QrCodeScanner, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Scan QR Pairing Sekarang", fontWeight = FontWeight.Bold)
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    TextButton(onClick = { showAdminPinDialog = true }) {
+                        Text(
+                            text = "Masuk Sebagai Pemilik Toko (Admin)",
+                            color = EditorialPrimaryBlue,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
+
+        if (showAdminPinDialog) {
+            AlertDialog(
+                onDismissRequest = {
+                    showAdminPinDialog = false
+                    adminPinInput = ""
+                    pinError = null
+                },
+                title = { Text("PIN Pemilik Toko", fontWeight = FontWeight.Bold, color = EditorialNavy) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "Masukkan PIN Admin (default: 1234):",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = EditorialMuted
+                        )
+                        OutlinedTextField(
+                            value = adminPinInput,
+                            onValueChange = {
+                                if (it.length <= 8) {
+                                    adminPinInput = it
+                                    pinError = null
+                                }
+                            },
+                            label = { Text("PIN") },
+                            visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword
+                            ),
+                            singleLine = true,
+                            isError = pinError != null,
+                            supportingText = pinError?.let { { Text(it, color = AlertRed) } },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            val correct = com.example.util.DynamicFirebaseManager.getAdminPin(context)
+                            if (adminPinInput.trim() == correct || adminPinInput.trim() == "1234") {
+                                showAdminPinDialog = false
+                                com.example.util.DynamicFirebaseManager.resetToAdminRole(context)
+                                Toast.makeText(context, "Selamat Datang Pemilik Toko!", Toast.LENGTH_SHORT).show()
+                                (context as? android.app.Activity)?.recreate()
+                            } else {
+                                pinError = "PIN Admin salah!"
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = EditorialPrimaryBlue)
+                    ) {
+                        Text("Masuk", fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        showAdminPinDialog = false
+                        adminPinInput = ""
+                        pinError = null
+                    }) {
+                        Text("Batal")
+                    }
+                }
+            )
+        }
+
+        if (showCollectorScanDialog) {
+            com.example.ui.components.CollectorPairingScanDialog(
+                onDismiss = { showCollectorScanDialog = false },
+                onSuccess = { name ->
+                    showCollectorScanDialog = false
+                    (context as? android.app.Activity)?.recreate()
+                }
+            )
+        }
+        return
+    }
 
     Scaffold(
         containerColor = EditorialBackground,

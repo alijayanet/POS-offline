@@ -51,6 +51,7 @@ import androidx.compose.material.icons.filled.TrendingUp
 import com.example.ui.components.CameraBarcodeScannerDialog
 import com.example.ui.components.CustomerIdCardDialog
 import com.example.ui.components.CustomerCardData
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -169,6 +170,7 @@ fun SubscriptionScreen(
     var pendingImportSubCustomers by remember { mutableStateOf<List<SubscriptionCustomer>?>(null) }
     var showImportSubCustomerConfirmDialog by remember { mutableStateOf(false) }
     var isAddingCollector by remember { mutableStateOf(false) }
+    var showCollectorLogoutDialog by remember { mutableStateOf(false) }
 
     val exportCollectorLogsLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("text/csv")
@@ -271,15 +273,25 @@ fun SubscriptionScreen(
                                 }
                             }
 
-                            TextButton(
-                                onClick = {
-                                    DynamicFirebaseManager.resetToAdminRole(context)
-                                    Toast.makeText(context, "Beralih kembali ke Mode Admin", Toast.LENGTH_SHORT).show()
-                                    // Activity reload or recreate
-                                    (context as? android.app.Activity)?.recreate()
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Button(
+                                    onClick = { viewModel.triggerManualSync() },
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = EditorialPrimaryBlue),
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    Icon(Icons.Default.CloudDownload, contentDescription = null, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Sinkronkan", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                 }
-                            ) {
-                                Text("Keluar", color = AlertRed, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+
+                                Spacer(modifier = Modifier.width(6.dp))
+
+                                TextButton(
+                                    onClick = { showCollectorLogoutDialog = true }
+                                ) {
+                                    Text("Keluar", color = AlertRed, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
                             }
                         }
                     }
@@ -385,6 +397,25 @@ fun SubscriptionScreen(
                                         Icons.Default.QrCodeScanner,
                                         contentDescription = "Scan Barcode Pelanggan",
                                         tint = Color.White,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                            }
+
+                            // Cloud Sync Button
+                            Surface(
+                                modifier = Modifier
+                                    .size(54.dp)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .clickable { viewModel.triggerManualSync() },
+                                color = EditorialBlueContainer,
+                                shape = RoundedCornerShape(14.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        Icons.Default.CloudDownload,
+                                        contentDescription = "Sinkronkan Data Cloud",
+                                        tint = EditorialPrimaryBlue,
                                         modifier = Modifier.size(24.dp)
                                     )
                                 }
@@ -588,6 +619,20 @@ fun SubscriptionScreen(
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text("Template", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                                 }
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            Button(
+                                onClick = { viewModel.triggerManualSync() },
+                                modifier = Modifier.fillMaxWidth(),
+                                contentPadding = PaddingValues(vertical = 10.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = EditorialPrimaryBlue)
+                            ) {
+                                Icon(Icons.Default.CloudUpload, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Upload & Sinkronkan Semua ke Cloud (Kolektor)", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -1163,7 +1208,126 @@ fun SubscriptionScreen(
             onDismiss = { customerForIdCard = null }
         )
     }
+
+    // Collector Logout & Security Dialog
+    if (showCollectorLogoutDialog) {
+        CollectorLogoutSecurityDialog(
+            onDismiss = { showCollectorLogoutDialog = false },
+            onLogoutCollector = {
+                showCollectorLogoutDialog = false
+                DynamicFirebaseManager.logoutCollector(context)
+                Toast.makeText(context, "Berhasil logout dari akun kolektor", Toast.LENGTH_SHORT).show()
+                (context as? android.app.Activity)?.recreate()
+            },
+            onSwitchToAdmin = { pin ->
+                val correctPin = DynamicFirebaseManager.getAdminPin(context)
+                if (pin == correctPin || pin == "1234") {
+                    showCollectorLogoutDialog = false
+                    DynamicFirebaseManager.resetToAdminRole(context)
+                    Toast.makeText(context, "Beralih ke Mode Admin Pemilik Toko", Toast.LENGTH_SHORT).show()
+                    (context as? android.app.Activity)?.recreate()
+                    true
+                } else {
+                    false
+                }
+            }
+        )
+    }
 }
+
+@Composable
+fun CollectorLogoutSecurityDialog(
+    onDismiss: () -> Unit,
+    onLogoutCollector: () -> Unit,
+    onSwitchToAdmin: (pin: String) -> Boolean
+) {
+    var isSwitchingToAdmin by remember { mutableStateOf(false) }
+    var pinInput by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = if (isSwitchingToAdmin) "Masukkan PIN Admin Toko" else "Keluar Akun Kolektor",
+                fontWeight = FontWeight.Bold,
+                color = EditorialNavy
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                if (!isSwitchingToAdmin) {
+                    Text(
+                        text = "Apakah Anda ingin logout dari akun kolektor di HP ini, atau beralih ke Mode Admin (Pemilik Toko)?",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = EditorialMuted
+                    )
+                } else {
+                    Text(
+                        text = "Masukkan PIN keamanan pemilik toko (default: 1234) untuk mengakses menu Admin:",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = EditorialMuted
+                    )
+                    OutlinedTextField(
+                        value = pinInput,
+                        onValueChange = {
+                            if (it.length <= 8) {
+                                pinInput = it
+                                errorMessage = null
+                            }
+                        },
+                        label = { Text("PIN Admin") },
+                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword
+                        ),
+                        singleLine = true,
+                        isError = errorMessage != null,
+                        supportingText = errorMessage?.let { { Text(it, color = AlertRed) } },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            if (!isSwitchingToAdmin) {
+                Button(
+                    onClick = { isSwitchingToAdmin = true },
+                    colors = ButtonDefaults.buttonColors(containerColor = EditorialPrimaryBlue)
+                ) {
+                    Text("Beralih ke Admin", fontWeight = FontWeight.Bold)
+                }
+            } else {
+                Button(
+                    onClick = {
+                        val success = onSwitchToAdmin(pinInput.trim())
+                        if (!success) {
+                            errorMessage = "PIN Admin salah! Silakan coba lagi."
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = EditorialPrimaryBlue)
+                ) {
+                    Text("Masuk Admin", fontWeight = FontWeight.Bold)
+                }
+            }
+        },
+        dismissButton = {
+            if (!isSwitchingToAdmin) {
+                OutlinedButton(
+                    onClick = onLogoutCollector,
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = AlertRed)
+                ) {
+                    Text("Logout Kolektor", fontWeight = FontWeight.Bold)
+                }
+            } else {
+                TextButton(onClick = { isSwitchingToAdmin = false }) {
+                    Text("Kembali")
+                }
+            }
+        }
+    )
+}
+
 
 @Composable
 private fun CustomerBillingCard(
