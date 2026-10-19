@@ -39,24 +39,48 @@ object DynamicFirebaseManager {
     private var customerListener: ListenerRegistration? = null
     private var collectorListener: ListenerRegistration? = null
 
+    val DEFAULT_PROJECT_ID: String = com.example.BuildConfig.DEFAULT_FIREBASE_PROJECT_ID
+    val DEFAULT_API_KEY: String = com.example.BuildConfig.DEFAULT_FIREBASE_API_KEY
+
+    fun getOrCreateStoreId(context: Context): String {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        var storeId = prefs.getString(KEY_STORE_ID, "") ?: ""
+        if (storeId.isEmpty() || storeId == DEFAULT_PROJECT_ID) {
+            storeId = "TOKO-" + java.util.UUID.randomUUID().toString().take(8).uppercase()
+            prefs.edit().putString(KEY_STORE_ID, storeId).apply()
+        }
+        return storeId
+    }
+
     fun getSyncConfig(context: Context): FirebaseSyncConfig {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val defaultStoreId = getOrCreateStoreId(context)
+        val isEnabled = prefs.getBoolean(KEY_ENABLED, true) // Enabled by default out-of-the-box
+        val rawProj = prefs.getString(KEY_PROJECT_ID, "") ?: ""
+        val projectId = rawProj.ifEmpty { DEFAULT_PROJECT_ID }
+        val rawKey = prefs.getString(KEY_API_KEY, "") ?: ""
+        val apiKey = rawKey.ifEmpty { DEFAULT_API_KEY }
+        val appId = prefs.getString(KEY_APP_ID, "") ?: ""
+        val rawStoreId = prefs.getString(KEY_STORE_ID, "") ?: ""
+        val storeId = if (rawStoreId.isEmpty() || rawStoreId == DEFAULT_PROJECT_ID) defaultStoreId else rawStoreId
+
         return FirebaseSyncConfig(
-            isEnabled = prefs.getBoolean(KEY_ENABLED, false),
-            projectId = prefs.getString(KEY_PROJECT_ID, "") ?: "",
-            apiKey = prefs.getString(KEY_API_KEY, "") ?: "",
-            applicationId = prefs.getString(KEY_APP_ID, "") ?: "",
-            storeId = prefs.getString(KEY_STORE_ID, "") ?: ""
+            isEnabled = isEnabled,
+            projectId = projectId,
+            apiKey = apiKey,
+            applicationId = appId,
+            storeId = storeId
         )
     }
 
     fun saveSyncConfig(context: Context, config: FirebaseSyncConfig) {
+        val finalStoreId = config.storeId.trim().ifEmpty { getOrCreateStoreId(context) }
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
             .putBoolean(KEY_ENABLED, config.isEnabled)
-            .putString(KEY_PROJECT_ID, config.projectId.trim())
-            .putString(KEY_API_KEY, config.apiKey.trim())
+            .putString(KEY_PROJECT_ID, config.projectId.trim().ifEmpty { DEFAULT_PROJECT_ID })
+            .putString(KEY_API_KEY, config.apiKey.trim().ifEmpty { DEFAULT_API_KEY })
             .putString(KEY_APP_ID, config.applicationId.trim())
-            .putString(KEY_STORE_ID, config.storeId.trim().ifEmpty { config.projectId.trim() })
+            .putString(KEY_STORE_ID, finalStoreId)
             .apply()
         
         // Reinitialize instance cleanly
@@ -67,8 +91,8 @@ object DynamicFirebaseManager {
             Log.e(TAG, "Error resetting previous FirebaseApp", e)
         }
 
-        if (config.isEnabled && config.projectId.isNotEmpty() && config.apiKey.isNotEmpty()) {
-            initFirebaseApp(context, config)
+        if (config.isEnabled) {
+            initFirebaseApp(context, config.copy(storeId = finalStoreId))
         }
     }
 

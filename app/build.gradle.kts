@@ -1,4 +1,6 @@
 import com.google.gms.googleservices.GoogleServicesPlugin.MissingGoogleServicesStrategy
+import java.util.Properties
+import java.io.FileInputStream
 
 plugins {
   alias(libs.plugins.android.application)
@@ -8,6 +10,15 @@ plugins {
   alias(libs.plugins.secrets)
   alias(libs.plugins.google.services)
 }
+
+val localProps = Properties().apply {
+  val file = rootProject.file("local.properties")
+  if (file.exists()) {
+    FileInputStream(file).use { load(it) }
+  }
+}
+val defaultFirebaseProjectId: String = localProps.getProperty("FIREBASE_DEFAULT_PROJECT_ID", "")
+val defaultFirebaseApiKey: String = localProps.getProperty("FIREBASE_DEFAULT_API_KEY", "")
 
 android {
   namespace = "com.example"
@@ -19,6 +30,9 @@ android {
     targetSdk = 36
     versionCode = 2
     versionName = "1.1"
+
+    buildConfigField("String", "DEFAULT_FIREBASE_PROJECT_ID", "\"$defaultFirebaseProjectId\"")
+    buildConfigField("String", "DEFAULT_FIREBASE_API_KEY", "\"$defaultFirebaseApiKey\"")
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }

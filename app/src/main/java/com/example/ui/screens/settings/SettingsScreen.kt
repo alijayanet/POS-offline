@@ -563,17 +563,44 @@ fun SettingsScreen(
 
                         Switch(
                             checked = isCloudSyncEnabled,
-                            onCheckedChange = { isCloudSyncEnabled = it }
+                            onCheckedChange = {
+                                isCloudSyncEnabled = it
+                                val current = com.example.util.DynamicFirebaseManager.getSyncConfig(context)
+                                com.example.util.DynamicFirebaseManager.saveSyncConfig(context, current.copy(isEnabled = it))
+                            }
                         )
                     }
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    Text(
-                        text = "Sinkronisasi realtime status tagihan dengan HP petugas kolektor di lapangan menggunakan project Firebase Firestore milik Anda sendiri (100% Gratis).",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = EditorialMuted
-                    )
+                    Surface(
+                        color = EditorialBlueContainer.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Cloud, contentDescription = null, tint = EditorialPrimaryBlue, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = if (com.example.BuildConfig.DEFAULT_FIREBASE_PROJECT_ID.isNotBlank()) {
+                                        "Bawaan Siap Pakai (${com.example.BuildConfig.DEFAULT_FIREBASE_PROJECT_ID})"
+                                    } else {
+                                        "Sinkronisasi Cloud Firebase"
+                                    },
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = EditorialPrimaryBlue
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Sinkronisasi realtime status tagihan dengan HP petugas kolektor di lapangan sudah aktif secara otomatis. ID Toko Anda: ${currentSyncConfig.storeId} (Data pelanggan Anda terisolasi & aman).",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = EditorialNavy
+                            )
+                        }
+                    }
 
                     if (isCloudSyncEnabled) {
                         Spacer(modifier = Modifier.height(14.dp))
@@ -620,12 +647,15 @@ fun SettingsScreen(
                                     Toast.makeText(context, "Project ID dan API Key tidak boleh kosong!", Toast.LENGTH_SHORT).show()
                                     return@Button
                                 }
+                                val safeStoreId = currentSyncConfig.storeId.ifEmpty {
+                                    com.example.util.DynamicFirebaseManager.getOrCreateStoreId(context)
+                                }
                                 val newConfig = com.example.util.FirebaseSyncConfig(
                                     isEnabled = true,
                                     projectId = firebaseProjectId.trim(),
                                     apiKey = firebaseApiKey.trim(),
                                     applicationId = firebaseAppId.trim(),
-                                    storeId = firebaseProjectId.trim()
+                                    storeId = safeStoreId
                                 )
                                 com.example.util.DynamicFirebaseManager.saveSyncConfig(context, newConfig)
                                 Toast.makeText(context, "Konfigurasi Cloud Firebase Berhasil Disimpan!", Toast.LENGTH_LONG).show()
